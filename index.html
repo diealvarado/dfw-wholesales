@@ -1,1 +1,444 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alvacom Homes · Off-Market</title>
+  <meta name="description" content="Alvacom Homes — curated off-market investment properties across DFW." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: { 50:'#f5f7fa', 100:'#e8eef5', 600:'#1e3a5f', 700:'#16304f', 800:'#0f243c', 900:'#0a1624' },
+            gold: { 400:'#d4b44a', 500:'#c9a227', 600:'#a8861c' }
+          },
+          fontFamily: {
+            display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            sans: ['"DM Sans"', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    html, body { height:100%; margin:0; font-family:'DM Sans', system-ui, sans-serif; background:#f5f7fa; color:#0f243c; }
+    #map { height:100%; width:100%; }
+    .spin { display:inline-block; width:12px; height:12px; border:2px solid #d5deea; border-top-color:#1e3a5f; border-radius:50%; animation:spin .75s linear infinite; vertical-align:-1px; margin-right:6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .line-clamp-3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+    @media print {
+      body * { visibility: hidden !important; }
+      #sheet, #sheet * { visibility: visible !important; }
+      #sheet { position:absolute; left:0; top:0; width:100%; max-height:none !important; overflow:visible !important; box-shadow:none !important; border:none !important; }
+      .no-print { display:none !important; }
+    }
+  </style>
+</head>
+<body class="h-full overflow-hidden">
+  <header class="fixed top-0 inset-x-0 z-[1100] border-b border-slate-200/80 bg-white/95 backdrop-blur">
+    <div class="mx-auto max-w-[1400px] px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <div class="min-w-0">
+        <div class="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-ink-700 leading-none">Alvacom Homes</div>
+        <div class="mt-0.5 text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">Off-Market</div>
+      </div>
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <span id="badge" class="hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-ink-100 text-ink-700">DFW focus · last 10 days</span>
+        <button id="btnFilter" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg bg-ink-700 text-white hover:bg-ink-600 transition">Show all cities</button>
+        <button id="btnView" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">List view</button>
+      </div>
+    </div>
+    <div class="border-t border-slate-100 bg-ink-50/90 px-4 sm:px-6 py-1.5">
+      <p id="status" class="mx-auto max-w-[1400px] text-xs text-slate-500"><span class="spin"></span>Loading listings…</p>
+    </div>
+  </header>
+
+  <main class="h-full pt-[88px] relative">
+    <div id="map"></div>
+    <div id="list" class="hidden absolute inset-0 overflow-y-auto bg-ink-50 z-[1000]">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 py-6">
+        <div id="grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="backdrop" class="hidden fixed inset-0 z-[1200] bg-ink-900/40 backdrop-blur-[2px] no-print"></div>
+  <aside id="sheet" class="hidden fixed inset-y-0 right-0 z-[1201] w-full max-w-xl overflow-y-auto bg-white shadow-2xl border-l border-slate-200">
+    <div class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-100 bg-white/95 px-5 py-3 backdrop-blur no-print">
+      <div>
+        <div class="font-display text-lg font-semibold text-ink-700">Property brief</div>
+        <div class="text-[10px] uppercase tracking-[0.18em] text-slate-400">Alvacom Homes · Off-Market</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btnPrint" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">Print / PDF</button>
+        <button id="btnClose" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200">Close</button>
+      </div>
+    </div>
+    <div id="sheetBody" class="px-5 py-5"></div>
+  </aside>
+
+  <script>
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSEqr1ov1Iqat1Ep3KSvFn1vbM8Ti-rRT9fhZOiPOGvkHnKi6Aub8RcJ5BZCOfLN_uKk8seu5bZfx2u/pub?gid=0&single=true&output=csv';
+
+    const ALLOWED_CITIES = [
+      'Dallas','Fort Worth','Ft Worth','Ft. Worth','Arlington','Plano','Irving','Garland','Grand Prairie','McKinney','Frisco',
+      'Denton','Richardson','Carrollton','Mesquite','Lewisville','Allen','Flower Mound','Mansfield','North Richland Hills','N. Richland Hills',
+      'Euless','Bedford','Grapevine','Keller','Southlake','Coppell','Rowlett','Wylie','Burleson','Cedar Hill','DeSoto','Desoto',
+      'Duncanville','Haltom City','Hurst','The Colony','Little Elm','Prosper','Rockwall','Weatherford','Cleburne','Waxahachie','Midlothian',
+      'Argyle','Lantana','Double Oak','Bartonville','Watauga','Highland Village','Roanoke','Trophy Club','Princeton','Sachse',
+      'Richland Hills','Crowley','Alvarado','Saginaw','Addison','Farmers Branch','University Park','Highland Park','Forney','Sunnyvale',
+      'Balch Springs','Seagoville','Lancaster','Celina','Anna','Melissa','Aubrey','Justin','Haslet'
+    ];
+    const allowedSet = new Set(ALLOWED_CITIES.map(normCity));
+
+    let map, markerLayer;
+    let rawRows = [];
+    let showAll = false;
+    let listMode = false;
+    let runId = 0;
+    let byId = {};
+
+    function normCity(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function clean(v) {
+      if (v == null) return '';
+      const s = String(v).trim();
+      return (!s || s.toUpperCase() === 'N/A') ? '' : s;
+    }
+    function parseDate(raw) {
+      if (!raw) return null;
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) return d;
+      const m = String(raw).trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+      if (!m) return null;
+      const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+      return new Date(y, Number(m[1]) - 1, Number(m[2]));
+    }
+    function findKey(keys, aliases) {
+      const cleaned = keys.map(k => ({ raw: k, norm: k.replace(/[^a-zA-Z]/g, '').toLowerCase() }));
+      for (const a of aliases) {
+        const hit = cleaned.find(c => c.norm === a);
+        if (hit) return hit.raw;
+      }
+      return undefined;
+    }
+    function money(v) {
+      if (!v) return 'Call for price';
+      const n = Number(String(v).replace(/[^0-9.]/g, ''));
+      if (!n || isNaN(n)) return String(v);
+      return '$' + n.toLocaleString('en-US');
+    }
+    function fullLine(p) {
+      return [p.address, [p.city, p.state].filter(Boolean).join(', '), p.zip].filter(Boolean).join(', ');
+    }
+    function makeId(p) {
+      return (p.emailId || (p.address + '|' + p.emailDate + '|' + p.price)).toLowerCase();
+    }
+    function setStatus(html) { document.getElementById('status').innerHTML = html; }
+
+    function init() {
+      map = L.map('map').setView([32.7767, -96.7970], 9);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 19
+      }).addTo(map);
+      markerLayer = L.layerGroup().addTo(map);
+
+      document.getElementById('btnFilter').onclick = toggleFilter;
+      document.getElementById('btnView').onclick = toggleView;
+      document.getElementById('btnClose').onclick = closeSheet;
+      document.getElementById('backdrop').onclick = closeSheet;
+      document.getElementById('btnPrint').onclick = () => window.print();
+      window.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+      Papa.parse(CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: (res) => { rawRows = res.data || []; processRows(); },
+        error: (err) => setStatus('<span class="text-red-600">Could not load listings: ' + esc(err && err.message) + '</span>')
+      });
+    }
+
+    function toggleFilter() {
+      showAll = !showAll;
+      const badge = document.getElementById('badge');
+      const btn = document.getElementById('btnFilter');
+      if (showAll) {
+        btn.textContent = 'Show DFW focus';
+        badge.textContent = 'All cities · last 10 days';
+        badge.className = 'hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800';
+      } else {
+        btn.textContent = 'Show all cities';
+        badge.textContent = 'DFW focus · last 10 days';
+        badge.className = 'hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-ink-100 text-ink-700';
+      }
+      processRows();
+    }
+
+    function toggleView() {
+      listMode = !listMode;
+      const btn = document.getElementById('btnView');
+      const list = document.getElementById('list');
+      const mapEl = document.getElementById('map');
+      if (listMode) {
+        btn.textContent = 'Map view';
+        mapEl.classList.add('hidden');
+        list.classList.remove('hidden');
+      } else {
+        btn.textContent = 'List view';
+        list.classList.add('hidden');
+        mapEl.classList.remove('hidden');
+        setTimeout(() => map.invalidateSize(), 40);
+      }
+    }
+
+    async function processRows() {
+      const my = ++runId;
+      if (!rawRows.length) {
+        setStatus('<span class="text-red-600">No rows in published sheet.</span>');
+        return;
+      }
+      const keys = Object.keys(rawRows[0] || {});
+      const k = {
+        address: findKey(keys, ['address']),
+        date: findKey(keys, ['emaildate', 'date']),
+        city: findKey(keys, ['city']),
+        state: findKey(keys, ['state']),
+        zip: findKey(keys, ['zipcode', 'zip']),
+        price: findKey(keys, ['price']),
+        sender: findKey(keys, ['sender']),
+        beds: findKey(keys, ['bedroom', 'bedrooms', 'beds']),
+        baths: findKey(keys, ['bathroom', 'bathrooms', 'baths']),
+        garage: findKey(keys, ['garage']),
+        sqft: findKey(keys, ['sqft', 'squarefeet']),
+        year: findKey(keys, ['yearbuild', 'yearbuilt', 'year']),
+        comments: findKey(keys, ['comments', 'comment']),
+        subject: findKey(keys, ['emailsubject', 'subject']),
+        emailId: findKey(keys, ['emailid', 'messageid', 'id'])
+      };
+      if (!k.address) {
+        setStatus('<span class="text-red-600">Missing Address column. Headers: ' + esc(keys.join(' | ')) + '</span>');
+        return;
+      }
+
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 10);
+      cutoff.setHours(0, 0, 0, 0);
+
+      const props = [];
+      for (const row of rawRows) {
+        const address = clean(row[k.address]);
+        if (!address) continue;
+        const emailDateRaw = k.date ? clean(row[k.date]) : '';
+        const emailDate = parseDate(emailDateRaw);
+        if (k.date && (!emailDate || emailDate < cutoff)) continue;
+        const city = k.city ? clean(row[k.city]) : '';
+        const zip = k.zip ? clean(row[k.zip]) : '';
+        if (!showAll) {
+          const cityOk = allowedSet.has(normCity(city));
+          const zipOk = /^(75|76)\d{3}\b/.test(zip);
+          if (!cityOk && !zipOk) continue;
+        }
+        const p = {
+          address,
+          city,
+          state: (k.state && clean(row[k.state])) || 'TX',
+          zip,
+          price: k.price ? clean(row[k.price]) : '',
+          sender: k.sender ? clean(row[k.sender]) : '',
+          emailDate: emailDateRaw,
+          beds: k.beds ? clean(row[k.beds]) : '',
+          baths: k.baths ? clean(row[k.baths]) : '',
+          garage: k.garage ? clean(row[k.garage]) : '',
+          sqft: k.sqft ? clean(row[k.sqft]) : '',
+          year: k.year ? clean(row[k.year]) : '',
+          comments: k.comments ? clean(row[k.comments]) : '',
+          subject: k.subject ? clean(row[k.subject]) : '',
+          emailId: k.emailId ? clean(row[k.emailId]) : ''
+        };
+        p.id = makeId(p);
+        props.push(p);
+      }
+
+      if (my !== runId) return;
+      byId = {};
+      props.forEach(p => { byId[p.id] = p; });
+
+      if (!props.length) {
+        markerLayer.clearLayers();
+        renderList([]);
+        setStatus('0 listings in the last 10 days for this filter.');
+        return;
+      }
+
+      setStatus('<span class="spin"></span>Mapping ' + props.length + ' listings…');
+      await plotMarkers(props, my);
+      if (my !== runId) return;
+      renderList(props);
+      setStatus(props.length + ' off-market listings · last 10 days');
+
+      if (location.hash.startsWith('#p=')) {
+        const id = decodeURIComponent(location.hash.slice(3));
+        if (byId[id]) openSheet(id);
+      }
+    }
+
+    async function geocode(p) {
+      let q = p.address;
+      if (p.city) q += ', ' + p.city;
+      if (p.zip) q += ' ' + p.zip;
+      q += ', TX, USA';
+      const cacheKey = 'geo_v3_' + q;
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) return { coords: JSON.parse(cached), cached: true };
+      } catch (e) {}
+      try {
+        const params = new URLSearchParams({ format: 'json', q, countrycodes: 'us', limit: '1', email: 'map@alvacomhomes.local' });
+        const resp = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), { headers: { Accept: 'application/json' } });
+        const data = await resp.json();
+        if (data && data.length) {
+          const coords = { lat: data[0].lat, lon: data[0].lon };
+          try { localStorage.setItem(cacheKey, JSON.stringify(coords)); } catch (e) {}
+          return { coords, cached: false };
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    async function plotMarkers(props, my) {
+      markerLayer.clearLayers();
+      const bounds = [];
+      for (let i = 0; i < props.length; i++) {
+        if (my !== runId) return;
+        setStatus('<span class="spin"></span>Mapping ' + (i + 1) + ' / ' + props.length + '…');
+        const p = props[i];
+        const geo = await geocode(p);
+        if (!geo) { await sleep(150); continue; }
+        await sleep(geo.cached ? 30 : 900);
+        p.lat = geo.coords.lat;
+        p.lon = geo.coords.lon;
+        const wrap = document.createElement('div');
+        wrap.className = 'text-sm leading-snug';
+        wrap.innerHTML =
+          '<div class="font-semibold text-slate-800 mb-1">' + esc(fullLine(p)) + '</div>' +
+          '<div class="font-bold text-ink-600 mb-2">' + esc(money(p.price)) + '</div>' +
+          '<button type="button" class="text-xs font-semibold px-2.5 py-1.5 rounded-md bg-ink-700 text-white">Open one-pager</button>';
+        wrap.querySelector('button').addEventListener('click', () => openSheet(p.id));
+        L.marker([p.lat, p.lon]).bindPopup(wrap).addTo(markerLayer);
+        bounds.push([p.lat, p.lon]);
+      }
+      if (my !== runId) return;
+      if (bounds.length) map.fitBounds(bounds, { padding: [48, 48] });
+    }
+
+    function pill(label, value) {
+      if (!value) return '';
+      return '<div class="rounded-xl border border-slate-200 bg-ink-50 px-3 py-2"><div class="text-[10px] uppercase tracking-wider text-slate-400">' +
+        label + '</div><div class="font-semibold text-ink-700">' + esc(value) + '</div></div>';
+    }
+
+    function openSheet(id) {
+      const p = byId[id];
+      if (!p) return;
+      history.replaceState(null, '', '#p=' + encodeURIComponent(id));
+      const dateObj = parseDate(p.emailDate);
+      const dateStr = dateObj ? dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.emailDate || '—');
+      const blurb = p.comments || p.subject || 'Off-market opportunity sourced from wholesaler inventory.';
+      const maps = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(fullLine(p));
+      const street = (p.lat && p.lon) ? ('https://www.google.com/maps?layer=c&cbll=' + p.lat + ',' + p.lon + '&cbp=12,0,0,0,0') : '';
+
+      document.getElementById('sheetBody').innerHTML =
+        '<div class="border border-slate-200 rounded-2xl overflow-hidden mb-5">' +
+          '<div class="bg-ink-700 text-white px-5 py-4">' +
+            '<div class="font-display text-2xl font-semibold leading-tight">' + esc(p.address) + '</div>' +
+            '<div class="text-sm text-white/80 mt-1">' + esc([p.city, p.state, p.zip].filter(Boolean).join(', ')) + '</div>' +
+            '<div class="mt-3 text-2xl font-bold text-gold-400">' + esc(money(p.price)) + '</div>' +
+          '</div>' +
+          '<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-4">' +
+            pill('Beds', p.beds) + pill('Baths', p.baths) + pill('Sq Ft', p.sqft) +
+            pill('Year', p.year) + pill('Garage', p.garage) + pill('Listed', dateStr) +
+          '</div>' +
+        '</div>' +
+        '<section class="mb-5">' +
+          '<h3 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 mb-2">From the deal email</h3>' +
+          '<p class="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">' + esc(blurb) + '</p>' +
+          (p.subject ? '<p class="mt-2 text-xs text-slate-500"><span class="font-semibold text-slate-600">Subject:</span> ' + esc(p.subject) + '</p>' : '') +
+        '</section>' +
+        '<section class="mb-5">' +
+          '<div class="rounded-xl border border-slate-200 px-4 py-3 text-sm">' +
+            '<span class="text-slate-400 text-xs uppercase tracking-wider">Wholesaler</span>' +
+            '<div class="font-medium text-ink-700 mt-0.5">' + esc(p.sender || '—') + '</div>' +
+          '</div>' +
+        '</section>' +
+        '<div class="no-print flex flex-col sm:flex-row gap-2 mb-6">' +
+          '<a href="' + maps + '" target="_blank" rel="noopener" class="flex-1 text-center text-xs font-semibold px-4 py-3 rounded-xl bg-ink-700 text-white hover:bg-ink-600">Google Maps</a>' +
+          (street ? '<a href="' + street + '" target="_blank" rel="noopener" class="flex-1 text-center text-xs font-semibold px-4 py-3 rounded-xl border border-slate-200 hover:bg-slate-50">Street View</a>' : '') +
+          '<button type="button" id="btnCopy" class="flex-1 text-xs font-semibold px-4 py-3 rounded-xl border border-gold-500 text-gold-600 hover:bg-amber-50">Copy link</button>' +
+        '</div>' +
+        '<footer class="border-t border-slate-100 pt-4 text-center">' +
+          '<div class="font-display text-xl text-ink-700">Alvacom Homes</div>' +
+          '<div class="text-[10px] uppercase tracking-[0.2em] text-slate-400 mt-1">Off-Market · DFW</div>' +
+          '<p class="text-[11px] text-slate-400 mt-3 leading-relaxed">Informational overview compiled from wholesaler emails. Verify all details independently. Not a public MLS listing.</p>' +
+        '</footer>';
+
+      const copyBtn = document.getElementById('btnCopy');
+      if (copyBtn) copyBtn.onclick = () => navigator.clipboard.writeText(location.href);
+      document.getElementById('sheet').classList.remove('hidden');
+      document.getElementById('backdrop').classList.remove('hidden');
+    }
+
+    function closeSheet() {
+      document.getElementById('sheet').classList.add('hidden');
+      document.getElementById('backdrop').classList.add('hidden');
+      if (location.hash.startsWith('#p=')) history.replaceState(null, '', location.pathname + location.search);
+    }
+
+    function renderList(props) {
+      const grid = document.getElementById('grid');
+      if (!props.length) {
+        grid.innerHTML = '<div class="col-span-full text-center text-slate-500 py-16">No listings match this filter.</div>';
+        return;
+      }
+      grid.innerHTML = props.map(p => {
+        const dateObj = parseDate(p.emailDate);
+        const dateStr = dateObj ? dateObj.toLocaleDateString() : (p.emailDate || '');
+        const facts = [p.beds && (p.beds + ' bd'), p.baths && (p.baths + ' ba'), p.sqft && (p.sqft + ' sf')].filter(Boolean).join(' · ');
+        return (
+          '<article class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition p-5 flex flex-col justify-between">' +
+            '<div>' +
+              '<div class="flex items-start justify-between gap-3 mb-2">' +
+                '<h3 class="font-display text-xl font-semibold text-ink-700 leading-snug">' + esc(p.address) + '</h3>' +
+                '<span class="shrink-0 text-sm font-bold text-gold-600 bg-amber-50 px-2.5 py-1 rounded-lg">' + esc(money(p.price)) + '</span>' +
+              '</div>' +
+              '<p class="text-sm text-slate-500 mb-3">' + esc([p.city, p.state, p.zip].filter(Boolean).join(', ')) + '</p>' +
+              (facts ? '<p class="text-xs font-medium text-ink-600 mb-3">' + esc(facts) + '</p>' : '') +
+              '<p class="text-xs text-slate-500 line-clamp-3 mb-4">' + esc((p.comments || p.subject || '').slice(0, 180)) + '</p>' +
+            '</div>' +
+            '<div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">' +
+              '<span class="text-[11px] text-slate-400">' + esc(dateStr) + '</span>' +
+              '<button type="button" data-id="' + esc(p.id) + '" class="js-open text-xs font-semibold px-3 py-2 rounded-lg bg-ink-700 text-white hover:bg-ink-600">One-pager</button>' +
+            '</div>' +
+          '</article>'
+        );
+      }).join('');
+      grid.querySelectorAll('.js-open').forEach(btn => {
+        btn.addEventListener('click', () => openSheet(btn.getAttribute('data-id')));
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
