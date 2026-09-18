@@ -117,12 +117,16 @@
     }
     function parseDate(raw) {
       if (!raw) return null;
-      const d = new Date(raw);
-      if (!isNaN(d.getTime())) return d;
-      const m = String(raw).trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-      if (!m) return null;
-      const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
-      return new Date(y, Number(m[1]) - 1, Number(m[2]));
+      const s = String(raw).trim();
+      // Prefer explicit US M/D/Y (sheet format) before Date() — avoids odd parses
+      const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+      if (m) {
+        const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+        const d = new Date(y, Number(m[1]) - 1, Number(m[2]));
+        return isNaN(d.getTime()) ? null : d;
+      }
+      const d2 = new Date(s);
+      return isNaN(d2.getTime()) ? null : d2;
     }
     function findKey(keys, aliases) {
       const cleaned = keys.map(k => ({ raw: k, norm: k.replace(/[^a-zA-Z]/g, '').toLowerCase() }));
@@ -148,8 +152,8 @@
 
     function init() {
       map = L.map('map').setView([32.7767, -96.7970], 9);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 19
       }).addTo(map);
       markerLayer = L.layerGroup().addTo(map);
@@ -212,7 +216,7 @@
       const keys = Object.keys(rawRows[0] || {});
       const k = {
         address: findKey(keys, ['address']),
-        date: findKey(keys, ['emaildate', 'date']),
+        date: findKey(keys, ['emaildate', 'date']), // Email Date
         city: findKey(keys, ['city']),
         state: findKey(keys, ['state']),
         zip: findKey(keys, ['zipcode', 'zip']),
@@ -232,17 +236,29 @@
         return;
       }
 
+      if (!k.date) {
+        setStatus('<span class="text-red-600">Missing Email Date column — cannot limit to last 10 days. Headers: ' + esc(keys.join(' | ')) + '</span>');
+        return;
+      }
+
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 10);
       cutoff.setHours(0, 0, 0, 0);
 
+      // Only keep last-10-day rows (sheet is newest-first; stop after a streak of older rows)
       const props = [];
+      let olderStreak = 0;
       for (const row of rawRows) {
         const address = clean(row[k.address]);
         if (!address) continue;
-        const emailDateRaw = k.date ? clean(row[k.date]) : '';
+        const emailDateRaw = clean(row[k.date]);
         const emailDate = parseDate(emailDateRaw);
-        if (k.date && (!emailDate || emailDate < cutoff)) continue;
+        if (!emailDate || emailDate < cutoff) {
+          olderStreak += 1;
+          if (olderStreak >= 40 && props.length) break; // rest of sheet is older history
+          continue;
+        }
+        olderStreak = 0;
         const city = k.city ? clean(row[k.city]) : '';
         const zip = k.zip ? clean(row[k.zip]) : '';
         if (!showAll) {
@@ -286,7 +302,7 @@
       await plotMarkers(props, my);
       if (my !== runId) return;
       renderList(props);
-      setStatus(props.length + ' off-market listings · last 10 days');
+      setStatus(props.length + ' listings from the last 10 days only');
 
       if (location.hash.startsWith('#p=')) {
         const id = decodeURIComponent(location.hash.slice(3));
