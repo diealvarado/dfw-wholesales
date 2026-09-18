@@ -113,10 +113,11 @@
       'Bartonville',
       'Highland Village',
       'Roanoke',
+      'Northlake',
       'Westlake',
       'Trophy Club',
       'Colleyville'
-    ];;;;
+    ];;;;;
     const allowedSet = new Set(ALLOWED_CITIES.map(normCity));
 
     let map, markerLayer;
@@ -283,8 +284,7 @@
         const city = k.city ? clean(row[k.city]) : '';
         const zip = k.zip ? clean(row[k.zip]) : '';
         if (!showAll) {
-          // City allowlist only (user DFW focus suburbs). Do not OR broad 75/76 ZIPs —
-          // that would re-include Dallas / Fort Worth / Arlington.
+          // City allowlist only. Do not OR broad 75/76 ZIPs.
           if (!allowedSet.has(normCity(city))) continue;
         }
         const p = {
