@@ -50,7 +50,7 @@
         <div class="mt-0.5 text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">Off-Market</div>
       </div>
       <div class="flex flex-wrap items-center justify-end gap-2">
-        <span id="badge" class="hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-ink-100 text-ink-700">DFW focus · last 10 days</span>
+        <span id="badge" class="hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-ink-100 text-ink-700">Target suburbs · last 10 days</span>
         <button id="btnFilter" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg bg-ink-700 text-white hover:bg-ink-600 transition">Show all cities</button>
         <button id="btnView" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">List view</button>
       </div>
@@ -88,25 +88,15 @@
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSEqr1ov1Iqat1Ep3KSvFn1vbM8Ti-rRT9fhZOiPOGvkHnKi6Aub8RcJ5BZCOfLN_uKk8seu5bZfx2u/pub?gid=0&single=true&output=csv';
 
     const ALLOWED_CITIES = [
-      'Dallas',
-      'Fort Worth',
-      'Ft Worth',
-      'Ft. Worth',
-      'Arlington',
       'Plano',
-      'Irving',
       'Garland',
-      'Grand Prairie',
-      'McKinney',
       'Frisco',
       'Denton',
       'Richardson',
       'Carrollton',
-      'Mesquite',
       'Lewisville',
       'Allen',
       'Flower Mound',
-      'Mansfield',
       'North Richland Hills',
       'N. Richland Hills',
       'Euless',
@@ -115,32 +105,19 @@
       'Keller',
       'Southlake',
       'Coppell',
-      'Rowlett',
-      'Wylie',
-      'Burleson',
-      'Cedar Hill',
-      'DeSoto',
-      'Desoto',
-      'Duncanville',
-      'Haltom City',
       'Hurst',
       'The Colony',
       'Little Elm',
-      'Prosper',
-      'Rockwall',
-      'Weatherford',
-      'Cleburne',
-      'Waxahachie',
-      'Midlothian',
       'Argyle',
       'Lantana',
       'Double Oak',
       'Bartonville',
-      'Watauga',
       'Highland Village',
       'Roanoke',
-      'Trophy Club'
-    ];;
+      'Westlake',
+      'Trophy Club',
+      'Colleyville'
+    ];;;
     const allowedSet = new Set(ALLOWED_CITIES.map(normCity));
 
     let map, markerLayer;
@@ -229,7 +206,7 @@
         badge.className = 'hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800';
       } else {
         btn.textContent = 'Show all cities';
-        badge.textContent = 'DFW focus · last 10 days';
+        badge.textContent = 'Target suburbs · last 10 days';
         badge.className = 'hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-ink-100 text-ink-700';
       }
       processRows();
@@ -307,9 +284,9 @@
         const city = k.city ? clean(row[k.city]) : '';
         const zip = k.zip ? clean(row[k.zip]) : '';
         if (!showAll) {
-          const cityOk = allowedSet.has(normCity(city));
-          const zipOk = /^(75|76)\d{3}\b/.test(zip);
-          if (!cityOk && !zipOk) continue;
+          // City allowlist only (user DFW focus suburbs). Do not OR broad 75/76 ZIPs —
+          // that would re-include Dallas / Fort Worth / Arlington.
+          if (!allowedSet.has(normCity(city))) continue;
         }
         const p = {
           address,
