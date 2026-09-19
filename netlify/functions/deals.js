@@ -125,8 +125,12 @@ function makeId(deal) {
 async function loadOverrides(event) {
   try {
     connectLambda(event);
-    const store = getStore('availability');
-    const data = await store.get('overrides', { type: 'json', consistency: 'strong' });
+    const siteID = process.env.BLOBS_SITE_ID || process.env.SITE_ID;
+    const token = process.env.BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
+    const store = (siteID && token)
+      ? getStore({ name: 'availability', siteID, token })
+      : getStore('availability');
+    const data = await store.get('overrides', { type: 'json' });
     return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
   } catch (err) {
     console.error('deals loadOverrides', err && err.message);
