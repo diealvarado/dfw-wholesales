@@ -277,9 +277,41 @@ exports.handler = async (event) => {
     deals.push(deal);
   }
 
+  // One pin per address+zip: keep newest Email Date; prefer non-empty price on ties
+  function normKey(d) {
+    const a = String(d.address || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const z = String(d.zip || '').replace(/\D/g, '').trim();
+    return a + '|' + z;
+  }
+  function priceScore(p) {
+    const s = String(p || '').trim();
+    if (!s) return 0;
+    const n = Number(s.replace(/[^0-9.]/g, ''));
+    return !isNaN(n) && n > 0 ? 2 : 1;
+  }
+  const byKey = new Map();
+  for (const d of deals) {
+    const key = normKey(d);
+    const prev = byKey.get(key);
+    if (!prev) {
+      byKey.set(key, d);
+      continue;
+    }
+    const dDate = parseDate(d.emailDate);
+    const pDate = parseDate(prev.emailDate);
+    const dMs = dDate ? dDate.getTime() : 0;
+    const pMs = pDate ? pDate.getTime() : 0;
+    if (dMs > pMs) {
+      byKey.set(key, d);
+    } else if (dMs === pMs && priceScore(d.price) > priceScore(prev.price)) {
+      byKey.set(key, d);
+    }
+  }
+  const deduped = Array.from(byKey.values());
+
   return {
     statusCode: 200,
     headers,
-    body: JSON.stringify({ role, deals }),
+    body: JSON.stringify({ role, deals: deduped }),
   };
 };
