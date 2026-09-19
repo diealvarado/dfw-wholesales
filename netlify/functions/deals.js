@@ -270,6 +270,8 @@ exports.handler = async (event) => {
       deal.sender = k.sender ? clean(row[k.sender]) : '';
     } else {
       deal.sender = null;
+      // Investors never see deals marked unavailable by admin
+      if (deal.available === false) continue;
     }
 
     deals.push(deal);
