@@ -25,7 +25,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
@@ -43,6 +42,19 @@
   </style>
 </head>
 <body class="h-full overflow-hidden">
+  <div id="loginOverlay" class="hidden fixed inset-0 z-[2000] flex items-center justify-center bg-ink-900/70 backdrop-blur-sm px-4">
+    <form id="loginForm" class="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-slate-200 p-6">
+      <div class="font-display text-2xl font-semibold text-ink-700">Alvacom Homes</div>
+      <div class="text-[10px] uppercase tracking-[0.22em] text-slate-400 mt-0.5 mb-4">Off-Market · Private access</div>
+      <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required
+        class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600" />
+      <p id="loginError" class="hidden mt-2 text-xs text-red-600"></p>
+      <button type="submit" id="loginBtn"
+        class="mt-4 w-full text-sm font-semibold px-4 py-2.5 rounded-xl bg-ink-700 text-white hover:bg-ink-600 transition">Sign in</button>
+    </form>
+  </div>
+
   <header class="fixed top-0 inset-x-0 z-[1100] border-b border-slate-200/80 bg-white/95 backdrop-blur">
     <div class="mx-auto max-w-[1400px] px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
       <div class="min-w-0">
@@ -53,6 +65,7 @@
         <span id="badge" class="hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-ink-100 text-ink-700">Target suburbs · last 10 days</span>
         <button id="btnFilter" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg bg-ink-700 text-white hover:bg-ink-600 transition">Show all cities</button>
         <button id="btnView" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">List view</button>
+        <button id="btnLogout" type="button" class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition">Sign out</button>
       </div>
     </div>
     <div class="border-t border-slate-100 bg-ink-50/90 px-4 sm:px-6 py-1.5">
@@ -85,8 +98,6 @@
   </aside>
 
   <script>
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSEqr1ov1Iqat1Ep3KSvFn1vbM8Ti-rRT9fhZOiPOGvkHnKi6Aub8RcJ5BZCOfLN_uKk8seu5bZfx2u/pub?gid=0&single=true&output=csv';
-
     const ALLOWED_CITIES = [
       'Plano',
       'Frisco',
@@ -117,11 +128,12 @@
       'Westlake',
       'Trophy Club',
       'Colleyville'
-    ];;;;;
+    ];
     const allowedSet = new Set(ALLOWED_CITIES.map(normCity));
 
     let map, markerLayer;
-    let rawRows = [];
+    let allDeals = [];
+    let authRole = null;
     let showAll = false;
     let listMode = false;
     let runId = 0;
@@ -132,15 +144,9 @@
     function esc(s) {
       return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
-    function clean(v) {
-      if (v == null) return '';
-      const s = String(v).trim();
-      return (!s || s.toUpperCase() === 'N/A') ? '' : s;
-    }
     function parseDate(raw) {
       if (!raw) return null;
       const s = String(raw).trim();
-      // Prefer explicit US M/D/Y (sheet format) before Date() — avoids odd parses
       const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
       if (m) {
         const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
@@ -149,14 +155,6 @@
       }
       const d2 = new Date(s);
       return isNaN(d2.getTime()) ? null : d2;
-    }
-    function findKey(keys, aliases) {
-      const cleaned = keys.map(k => ({ raw: k, norm: k.replace(/[^a-zA-Z]/g, '').toLowerCase() }));
-      for (const a of aliases) {
-        const hit = cleaned.find(c => c.norm === a);
-        if (hit) return hit.raw;
-      }
-      return undefined;
     }
     function money(v) {
       if (!v) return 'Call for price';
@@ -172,6 +170,54 @@
     }
     function setStatus(html) { document.getElementById('status').innerHTML = html; }
 
+    function showLogin(msg) {
+      const overlay = document.getElementById('loginOverlay');
+      overlay.classList.remove('hidden');
+      const err = document.getElementById('loginError');
+      if (msg) {
+        err.textContent = msg;
+        err.classList.remove('hidden');
+      } else {
+        err.classList.add('hidden');
+        err.textContent = '';
+      }
+      document.getElementById('btnLogout').classList.add('hidden');
+      setTimeout(() => document.getElementById('password').focus(), 50);
+    }
+
+    function hideLogin() {
+      document.getElementById('loginOverlay').classList.add('hidden');
+      document.getElementById('loginError').classList.add('hidden');
+      document.getElementById('btnLogout').classList.remove('hidden');
+    }
+
+    async function loadDeals() {
+      setStatus('<span class="spin"></span>Loading listings…');
+      try {
+        const resp = await fetch('/api/deals', { credentials: 'same-origin' });
+        if (resp.status === 401) {
+          showLogin();
+          setStatus('Sign in to view listings.');
+          return false;
+        }
+        if (!resp.ok) {
+          const t = await resp.text();
+          setStatus('<span class="text-red-600">Could not load listings (' + resp.status + ').</span>');
+          console.error(t);
+          return false;
+        }
+        const data = await resp.json();
+        authRole = data.role || null;
+        allDeals = Array.isArray(data.deals) ? data.deals : [];
+        hideLogin();
+        processRows();
+        return true;
+      } catch (err) {
+        setStatus('<span class="text-red-600">Could not load listings: ' + esc(err && err.message) + '</span>');
+        return false;
+      }
+    }
+
     function init() {
       map = L.map('map').setView([32.7767, -96.7970], 9);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -185,15 +231,53 @@
       document.getElementById('btnClose').onclick = closeSheet;
       document.getElementById('backdrop').onclick = closeSheet;
       document.getElementById('btnPrint').onclick = () => window.print();
+      document.getElementById('btnLogout').onclick = async () => {
+        try { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); } catch (_) {}
+        authRole = null;
+        allDeals = [];
+        byId = {};
+        markerLayer.clearLayers();
+        renderList([]);
+        showLogin();
+        setStatus('Signed out.');
+      };
       window.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 
-      Papa.parse(CSV_URL, {
-        download: true,
-        header: true,
-        skipEmptyLines: true,
-        complete: (res) => { rawRows = res.data || []; processRows(); },
-        error: (err) => setStatus('<span class="text-red-600">Could not load listings: ' + esc(err && err.message) + '</span>')
+      document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('loginBtn');
+        const pw = document.getElementById('password').value;
+        const err = document.getElementById('loginError');
+        btn.disabled = true;
+        btn.textContent = 'Signing in…';
+        err.classList.add('hidden');
+        try {
+          const resp = await fetch('/api/login', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pw })
+          });
+          if (!resp.ok) {
+            err.textContent = 'Incorrect password.';
+            err.classList.remove('hidden');
+            btn.disabled = false;
+            btn.textContent = 'Sign in';
+            return;
+          }
+          document.getElementById('password').value = '';
+          btn.disabled = false;
+          btn.textContent = 'Sign in';
+          await loadDeals();
+        } catch (ex) {
+          err.textContent = 'Sign-in failed. Try again.';
+          err.classList.remove('hidden');
+          btn.disabled = false;
+          btn.textContent = 'Sign in';
+        }
       });
+
+      loadDeals();
     }
 
     function toggleFilter() {
@@ -231,78 +315,38 @@
 
     async function processRows() {
       const my = ++runId;
-      if (!rawRows.length) {
-        setStatus('<span class="text-red-600">No rows in published sheet.</span>');
-        return;
-      }
-      const keys = Object.keys(rawRows[0] || {});
-      const k = {
-        address: findKey(keys, ['address']),
-        date: findKey(keys, ['emaildate', 'date']), // Email Date
-        city: findKey(keys, ['city']),
-        state: findKey(keys, ['state']),
-        zip: findKey(keys, ['zipcode', 'zip']),
-        price: findKey(keys, ['price']),
-        sender: findKey(keys, ['sender']),
-        beds: findKey(keys, ['bedroom', 'bedrooms', 'beds']),
-        baths: findKey(keys, ['bathroom', 'bathrooms', 'baths']),
-        garage: findKey(keys, ['garage']),
-        sqft: findKey(keys, ['sqft', 'squarefeet']),
-        year: findKey(keys, ['yearbuild', 'yearbuilt', 'year']),
-        comments: findKey(keys, ['comments', 'comment']),
-        subject: findKey(keys, ['emailsubject', 'subject']),
-        emailId: findKey(keys, ['emailid', 'messageid', 'id'])
-      };
-      if (!k.address) {
-        setStatus('<span class="text-red-600">Missing Address column. Headers: ' + esc(keys.join(' | ')) + '</span>');
+      if (!allDeals.length) {
+        markerLayer.clearLayers();
+        renderList([]);
+        setStatus('0 listings in the last 10 days for this filter.');
         return;
       }
 
-      if (!k.date) {
-        setStatus('<span class="text-red-600">Missing Email Date column — cannot limit to last 10 days. Headers: ' + esc(keys.join(' | ')) + '</span>');
-        return;
-      }
-
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 10);
-      cutoff.setHours(0, 0, 0, 0);
-
-      // Only keep last-10-day rows (sheet is newest-first; stop after a streak of older rows)
       const props = [];
-      let olderStreak = 0;
-      for (const row of rawRows) {
-        const address = clean(row[k.address]);
+      for (const d of allDeals) {
+        const address = d.address || '';
         if (!address) continue;
-        const emailDateRaw = clean(row[k.date]);
-        const emailDate = parseDate(emailDateRaw);
-        if (!emailDate || emailDate < cutoff) {
-          olderStreak += 1;
-          if (olderStreak >= 40 && props.length) break; // rest of sheet is older history
-          continue;
-        }
-        olderStreak = 0;
-        const city = k.city ? clean(row[k.city]) : '';
-        const zip = k.zip ? clean(row[k.zip]) : '';
+        const city = d.city || '';
         if (!showAll) {
-          // City allowlist only. Do not OR broad 75/76 ZIPs.
           if (!allowedSet.has(normCity(city))) continue;
         }
         const p = {
           address,
           city,
-          state: (k.state && clean(row[k.state])) || 'TX',
-          zip,
-          price: k.price ? clean(row[k.price]) : '',
-          sender: k.sender ? clean(row[k.sender]) : '',
-          emailDate: emailDateRaw,
-          beds: k.beds ? clean(row[k.beds]) : '',
-          baths: k.baths ? clean(row[k.baths]) : '',
-          garage: k.garage ? clean(row[k.garage]) : '',
-          sqft: k.sqft ? clean(row[k.sqft]) : '',
-          year: k.year ? clean(row[k.year]) : '',
-          comments: k.comments ? clean(row[k.comments]) : '',
-          subject: k.subject ? clean(row[k.subject]) : '',
-          emailId: k.emailId ? clean(row[k.emailId]) : ''
+          state: d.state || 'TX',
+          zip: d.zip || '',
+          price: d.price || '',
+          sender: d.sender || '',
+          emailDate: d.emailDate || '',
+          beds: d.beds || '',
+          baths: d.baths || '',
+          garage: d.garage || '',
+          sqft: d.sqft || '',
+          year: d.year || '',
+          comments: d.comments || '',
+          subject: d.subject || '',
+          emailId: d.emailId || '',
+          available: d.available !== false
         };
         p.id = makeId(p);
         props.push(p);
@@ -366,12 +410,19 @@
         await sleep(geo.cached ? 30 : 900);
         p.lat = geo.coords.lat;
         p.lon = geo.coords.lon;
+        const facts = [p.beds && (p.beds + ' bd'), p.baths && (p.baths + ' ba'), p.sqft && (p.sqft + ' sf')].filter(Boolean).join(' · ');
+        const wholesalerLine = p.sender
+          ? '<div class="text-xs text-slate-500 mb-1">Wholesaler: ' + esc(p.sender) + '</div>'
+          : '';
         const wrap = document.createElement('div');
         wrap.className = 'text-sm leading-snug';
         wrap.innerHTML =
           '<div class="font-semibold text-slate-800 mb-1">' + esc(fullLine(p)) + '</div>' +
-          '<div class="font-bold text-ink-600 mb-2">' + esc(money(p.price)) + '</div>' +
-          '<button type="button" class="text-xs font-semibold px-2.5 py-1.5 rounded-md bg-ink-700 text-white">Open one-pager</button>';
+          '<div class="font-bold text-ink-600 mb-1">' + esc(money(p.price)) + '</div>' +
+          (facts ? '<div class="text-xs text-slate-600 mb-1">' + esc(facts) + '</div>' : '') +
+          '<div class="text-xs font-medium text-emerald-700 mb-1">Available: Yes</div>' +
+          wholesalerLine +
+          '<button type="button" class="text-xs font-semibold px-2.5 py-1.5 rounded-md bg-ink-700 text-white">Open brief</button>';
         wrap.querySelector('button').addEventListener('click', () => openSheet(p.id));
         L.marker([p.lat, p.lon]).bindPopup(wrap).addTo(markerLayer);
         bounds.push([p.lat, p.lon]);
@@ -396,12 +447,22 @@
       const maps = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(fullLine(p));
       const street = (p.lat && p.lon) ? ('https://www.google.com/maps?layer=c&cbll=' + p.lat + ',' + p.lon + '&cbp=12,0,0,0,0') : '';
 
+      const wholesalerSection = p.sender
+        ? ('<section class="mb-5">' +
+            '<div class="rounded-xl border border-slate-200 px-4 py-3 text-sm">' +
+              '<span class="text-slate-400 text-xs uppercase tracking-wider">Wholesaler</span>' +
+              '<div class="font-medium text-ink-700 mt-0.5">' + esc(p.sender) + '</div>' +
+            '</div>' +
+          '</section>')
+        : '';
+
       document.getElementById('sheetBody').innerHTML =
         '<div class="border border-slate-200 rounded-2xl overflow-hidden mb-5">' +
           '<div class="bg-ink-700 text-white px-5 py-4">' +
             '<div class="font-display text-2xl font-semibold leading-tight">' + esc(p.address) + '</div>' +
             '<div class="text-sm text-white/80 mt-1">' + esc([p.city, p.state, p.zip].filter(Boolean).join(', ')) + '</div>' +
             '<div class="mt-3 text-2xl font-bold text-gold-400">' + esc(money(p.price)) + '</div>' +
+            '<div class="mt-2 text-xs font-medium text-emerald-300">Available: Yes</div>' +
           '</div>' +
           '<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-4">' +
             pill('Beds', p.beds) + pill('Baths', p.baths) + pill('Sq Ft', p.sqft) +
@@ -413,12 +474,7 @@
           '<p class="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">' + esc(blurb) + '</p>' +
           (p.subject ? '<p class="mt-2 text-xs text-slate-500"><span class="font-semibold text-slate-600">Subject:</span> ' + esc(p.subject) + '</p>' : '') +
         '</section>' +
-        '<section class="mb-5">' +
-          '<div class="rounded-xl border border-slate-200 px-4 py-3 text-sm">' +
-            '<span class="text-slate-400 text-xs uppercase tracking-wider">Wholesaler</span>' +
-            '<div class="font-medium text-ink-700 mt-0.5">' + esc(p.sender || '—') + '</div>' +
-          '</div>' +
-        '</section>' +
+        wholesalerSection +
         '<div class="no-print flex flex-col sm:flex-row gap-2 mb-6">' +
           '<a href="' + maps + '" target="_blank" rel="noopener" class="flex-1 text-center text-xs font-semibold px-4 py-3 rounded-xl bg-ink-700 text-white hover:bg-ink-600">Google Maps</a>' +
           (street ? '<a href="' + street + '" target="_blank" rel="noopener" class="flex-1 text-center text-xs font-semibold px-4 py-3 rounded-xl border border-slate-200 hover:bg-slate-50">Street View</a>' : '') +
@@ -460,7 +516,8 @@
                 '<span class="shrink-0 text-sm font-bold text-gold-600 bg-amber-50 px-2.5 py-1 rounded-lg">' + esc(money(p.price)) + '</span>' +
               '</div>' +
               '<p class="text-sm text-slate-500 mb-3">' + esc([p.city, p.state, p.zip].filter(Boolean).join(', ')) + '</p>' +
-              (facts ? '<p class="text-xs font-medium text-ink-600 mb-3">' + esc(facts) + '</p>' : '') +
+              (facts ? '<p class="text-xs font-medium text-ink-600 mb-1">' + esc(facts) + '</p>' : '') +
+              '<p class="text-xs font-medium text-emerald-700 mb-3">Available: Yes</p>' +
               '<p class="text-xs text-slate-500 line-clamp-3 mb-4">' + esc((p.comments || p.subject || '').slice(0, 180)) + '</p>' +
             '</div>' +
             '<div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">' +
