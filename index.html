@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alvacom Homes · Off-Market</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
   <meta name="description" content="Alvacom Homes — curated off-market investment properties across DFW." />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -35,17 +38,6 @@
     .line-clamp-3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
     .marker-unavail { filter: grayscale(1) opacity(0.55); }
     .card-unavail { opacity: 0.72; background: #f1f5f9 !important; }
-    .thumb {
-      width: 100%; height: 140px; object-fit: cover; display: block;
-      background: linear-gradient(135deg, #e2e8f0, #f8fafc);
-    }
-    .thumb-sm { height: 100px; border-radius: 0.5rem; }
-    .thumb-hero { height: 200px; }
-    .thumb-ph {
-      display: flex; align-items: flex-end; padding: 0.75rem;
-      color: #64748b; font-size: 0.75rem; font-weight: 600;
-      box-sizing: border-box;
-    }
     @media print {
       body * { visibility: hidden !important; }
       #sheet, #sheet * { visibility: visible !important; }
@@ -123,7 +115,7 @@
       <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
         <div>
           <div id="filterTitle" class="font-display text-lg font-semibold text-ink-700">My city filter</div>
-          <div class="text-xs text-slate-500">Pick suburbs to show. Saved on this device only.</div>
+          <div class="text-xs text-slate-500">Pick any DFW cities to show. Saved on this device only.</div>
         </div>
         <button type="button" id="btnFilterClose" class="text-xs font-semibold px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200">Close</button>
       </div>
@@ -131,7 +123,7 @@
         <div id="cityChips" class="grid grid-cols-2 gap-2 text-sm"></div>
       </div>
       <div class="px-5 py-4 border-t border-slate-100 flex flex-wrap gap-2 justify-between">
-        <button type="button" id="btnFilterReset" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">All target suburbs</button>
+        <button type="button" id="btnFilterReset" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">All DFW cities</button>
         <button type="button" id="btnFilterSave" class="text-xs font-semibold px-4 py-2 rounded-lg bg-ink-700 text-white hover:bg-ink-600">Save filter</button>
       </div>
     </div>
@@ -170,6 +162,26 @@
       'Colleyville'
     ];
     const allowedSet = new Set(ALLOWED_CITIES.map(normCity));
+    const ALL_DFW_CITIES = [
+      'Dallas', 'Fort Worth', 'Arlington', 'Plano', 'Garland', 'Irving', 'Grand Prairie',
+      'McKinney', 'Frisco', 'Denton', 'Richardson', 'Mesquite', 'Carrollton', 'Lewisville',
+      'Allen', 'Flower Mound', 'North Richland Hills', 'N. Richland Hills', 'Euless', 'Bedford',
+      'Grapevine', 'Keller', 'Southlake', 'Coppell', 'Hurst', 'The Colony', 'Little Elm',
+      'Rowlett', 'Wylie', 'Rockwall', 'Mansfield', 'Burleson', 'Cedar Hill', 'DeSoto',
+      'Lancaster', 'Duncanville', 'Midlothian', 'Waxahachie', 'Prosper', 'Celina', 'Melissa',
+      'Anna', 'Princeton', 'Fate', 'Royse City', 'Forney', 'Sunnyvale', 'Sachse', 'Murphy',
+      'Parker', 'Fairview', 'Addison', 'Farmers Branch', 'Highland Park', 'University Park',
+      'Balch Springs', 'Seagoville', 'Hutchins', 'Wilmer', 'Red Oak', 'Glenn Heights', 'Ovilla',
+      'Venus', 'Joshua', 'Cleburne', 'Crowley', 'Benbrook', 'White Settlement', 'River Oaks',
+      'Westworth Village', 'Lake Worth', 'Sansom Park', 'Azle', 'Saginaw', 'Haslet',
+      'Roanoke', 'Trophy Club', 'Westlake', 'Northlake', 'Colleyville', 'Argyle', 'Bartonville',
+      'Double Oak', 'Highland Village', 'Lantana', 'Corinth', 'Lake Dallas', 'Hickory Creek',
+      'Shady Shores', 'Oak Point', 'Aubrey', 'Providence Village', 'Cross Roads', 'Ponder',
+      'Justin', 'Krum', 'Sanger', 'Pilot Point', 'Decatur', 'Weatherford', 'Aledo',
+      'Hudson Oaks', 'Willow Park', 'Springtown', 'Kennedale', 'Forest Hill', 'Everman',
+      'Richland Hills', 'Haltom City', 'Watauga', 'Northlake', 'Westlake', 'Southlake'
+    ];
+    const allDfwSet = new Set(ALL_DFW_CITIES.map(normCity));
 
     let map, markerLayer;
     let allDeals = [];
@@ -202,26 +214,9 @@
       if (authRole !== 'admin') {
         const mine = loadMyCities();
         if (mine && mine.length) return new Set(mine.map(normCity));
+        return allDfwSet;
       }
       return allowedSet;
-    }
-    function thumbUrl(p) {
-      if (p && p.lat != null && p.lon != null && !isNaN(Number(p.lat)) && !isNaN(Number(p.lon))) {
-        const lat = encodeURIComponent(p.lat);
-        const lon = encodeURIComponent(p.lon);
-        return 'https://staticmap.openstreetmap.de/staticmap.php?center=' + lat + ',' + lon +
-          '&zoom=16&size=480x280&maptype=mapnik&markers=' + lat + ',' + lon + ',lightblue1';
-      }
-      return '';
-    }
-    function thumbHtml(p, cls) {
-      const u = thumbUrl(p);
-      const c = cls || 'thumb';
-      if (u) {
-        return '<img class="' + c + '" src="' + esc(u) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;' + c + ' thumb-ph&quot;>Map preview</div>\'" />';
-      }
-      const label = esc((p && (p.address || p.city)) || 'Property');
-      return '<div class="' + c + ' thumb-ph">' + label + '</div>';
     }
     function syncRoleChrome() {
       const btnFilter = document.getElementById('btnFilter');
@@ -239,21 +234,22 @@
         btnMy.classList.remove('hidden');
         showAll = false;
         const mine = loadMyCities();
-        badge.textContent = (mine && mine.length) ? ('My cities · ' + mine.length) : 'Target suburbs';
+        badge.textContent = (mine && mine.length) ? ('My cities · ' + mine.length) : 'All DFW cities';
         badge.className = 'hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-ink-100 text-ink-700';
       }
     }
     function openFilterModal() {
       const wrap = document.getElementById('cityChips');
-      const selected = new Set((loadMyCities() || ALLOWED_CITIES).map(normCity));
+      const selected = new Set((loadMyCities() || ALL_DFW_CITIES).map(normCity));
       const uniq = [];
       const seen = new Set();
-      ALLOWED_CITIES.forEach(c => {
+      ALL_DFW_CITIES.forEach(c => {
         const n = normCity(c);
         if (seen.has(n)) return;
         seen.add(n);
         uniq.push(c);
       });
+      uniq.sort((a, b) => a.localeCompare(b));
       wrap.innerHTML = uniq.map(c => {
         const n = normCity(c);
         return '<label class="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-2 hover:bg-slate-50 cursor-pointer">' +
@@ -446,7 +442,7 @@
           picked.push(cb.getAttribute('data-city'));
         });
         if (!picked.length) {
-          alert('Pick at least one city, or choose “All target suburbs”.');
+          alert('Pick at least one city, or choose “All DFW cities”.');
           return;
         }
         saveMyCities(picked);
@@ -670,7 +666,6 @@
       const wrap = document.createElement('div');
       wrap.className = 'text-sm leading-snug';
       wrap.innerHTML =
-        '<div class="mb-2 overflow-hidden rounded-lg">' + thumbHtml(p, 'thumb thumb-sm') + '</div>' +
         unavailNote +
         '<div class="font-semibold text-slate-800 mb-1">' + esc(fullLine(p)) + '</div>' +
         '<div class="font-bold text-ink-600 mb-1">' + esc(money(p.price)) + '</div>' +
@@ -773,7 +768,6 @@
                 : ('<div class="text-xs font-medium ' + availColor + '">' + (p.available !== false ? 'Available' : 'Unavailable') + '</div>')) +
             '</div>' +
           '</div>' +
-          thumbHtml(p, 'thumb thumb-hero') +
           '<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-4">' +
             pill('Beds', p.beds) + pill('Baths', p.baths) + pill('Sq Ft', p.sqft) +
             pill('Year', p.year) + pill('Garage', p.garage) + pill('Listed', dateStr) +
@@ -824,7 +818,6 @@
           '<article class="rounded-2xl border shadow-sm hover:shadow-md transition p-5 flex flex-col justify-between ' +
             (unavail ? 'card-unavail border-slate-300' : 'bg-white border-slate-200') + '">' +
             '<div>' +
-              '<div class="mb-3 -mx-5 -mt-5 overflow-hidden rounded-t-2xl">' + thumbHtml(p, 'thumb') + '</div>' +
               '<div class="flex items-start justify-between gap-3 mb-2">' +
                 '<h3 class="font-display text-xl font-semibold text-ink-700 leading-snug">' + esc(p.address) + '</h3>' +
                 '<span class="shrink-0 text-sm font-bold text-gold-600 bg-amber-50 px-2.5 py-1 rounded-lg">' + esc(money(p.price)) + '</span>' +
