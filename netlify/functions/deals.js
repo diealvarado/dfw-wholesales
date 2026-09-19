@@ -125,9 +125,9 @@ function makeId(deal) {
 async function loadOverrides(event) {
   try {
     connectLambda(event);
-    const store = getStore('availability');
-    const data = await store.get('overrides', { type: 'json' });
-    return data && typeof data === 'object' ? data : {};
+    const store = getStore({ name: 'availability', consistency: 'strong' });
+    const data = await store.get('overrides', { type: 'json', consistency: 'strong' });
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
   } catch (err) {
     console.error('deals loadOverrides', err && err.message);
     return {};
