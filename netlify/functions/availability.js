@@ -1,52 +1,44 @@
 const { getStore, connectLambda } = require('@netlify/blobs');
 
-function parseCookies(header) {
-  const out = {};
-  if (!header) return out;
-  String(header).split(';').forEach((part) => {
-    const i = part.indexOf('=');
-    if (i === -1) return;
-    const k = part.slice(0, i).trim();
-    const v = part.slice(i + 1).trim();
-    if (k) out[k] = decodeURIComponent(v);
-  });
-  return out;
+function parseCookies(header = '') {
+  return Object.fromEntries(
+    header.split(';').map((p) => p.trim()).filter(Boolean).map((p) => {
+      const i = p.indexOf('=');
+      if (i < 0) return [p, ''];
+      return [p.slice(0, i), decodeURIComponent(p.slice(i + 1))];
+    })
+  );
 }
 
-function json(statusCode, body, extraHeaders) {
+function json(status, body) {
   return {
-    statusCode,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-store',
-      ...(extraHeaders || {}),
-    },
+    statusCode: status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     body: JSON.stringify(body),
   };
 }
 
+function storeFor(event) {
+  connectLambda(event);
+  return getStore('availability');
+}
+
 async function loadOverrides(event) {
   try {
-    connectLambda(event);
-    const store = getStore({ name: 'availability', consistency: 'strong' });
+    const store = storeFor(event);
     const data = await store.get('overrides', { type: 'json', consistency: 'strong' });
     return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
   } catch (err) {
-    console.error('availability loadOverrides', err && err.message);
+    console.error('availability loadOverrides', err && err.message, err);
     return {};
   }
 }
 
 async function saveOverrides(event, overrides) {
-  connectLambda(event);
-  const store = getStore({ name: 'availability', consistency: 'strong' });
-  await store.setJSON('overrides', overrides);
-  // Read-after-write check (strong) so callers don't race eventual consistency
-  const verify = await store.get('overrides', { type: 'json', consistency: 'strong' });
-  if (!verify || verify[Object.keys(overrides).slice(-1)[0]] !== overrides[Object.keys(overrides).slice(-1)[0]]) {
-    // Fallback: rewrite once if verify looks stale
-    await store.setJSON('overrides', overrides);
-  }
+  const store = storeFor(event);
+  await store.set('overrides', JSON.stringify(overrides), {
+    contentType: 'application/json',
+  });
 }
 
 exports.handler = async (event) => {
@@ -61,14 +53,11 @@ exports.handler = async (event) => {
   }
 
   if (event.httpMethod === 'GET') {
-    const overrides = await loadOverrides(event);
-    return json(200, { overrides });
+    return json(200, { overrides: await loadOverrides(event) });
   }
 
   if (event.httpMethod === 'POST') {
-    if (role !== 'admin') {
-      return json(403, { error: 'Admin only' });
-    }
+    if (role !== 'admin') return json(403, { error: 'Admin only' });
     let body;
     try {
       body = JSON.parse(event.body || '{}');
@@ -76,20 +65,29 @@ exports.handler = async (event) => {
       return json(400, { error: 'Invalid JSON' });
     }
     const id = String(body.id || '').trim();
-    if (!id) return json(400, { error: 'Missing id' });
+    if (!id) return json(400, { error: 'id required' });
     if (typeof body.available !== 'boolean') {
       return json(400, { error: 'available must be boolean' });
     }
-
-    const overrides = await loadOverrides(event);
-    overrides[id] = body.available;
     try {
+      const overrides = await loadOverrides(event);
+      overrides[id] = body.available;
       await saveOverrides(event, overrides);
+      // strong read-after-write
+      const verify = await loadOverrides(event);
+      return json(200, {
+        ok: true,
+        id,
+        available: body.available,
+        overrides: verify,
+      });
     } catch (err) {
-      console.error('availability save', err && err.message);
-      return json(500, { error: 'Failed to save override' });
+      console.error('availability save', err && err.message, err);
+      return json(500, {
+        error: 'Failed to save override',
+        detail: String(err && err.message || err),
+      });
     }
-    return json(200, { ok: true, id, available: body.available, overrides });
   }
 
   return json(405, { error: 'Method not allowed' });
