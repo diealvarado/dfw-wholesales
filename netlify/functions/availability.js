@@ -54,13 +54,7 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'GET') {
     try {
       const overrides = await loadOverrides(event);
-      return json(200, {
-        overrides,
-        diag: {
-          hasSite: Boolean(process.env.BLOBS_SITE_ID || process.env.SITE_ID),
-          hasToken: Boolean(process.env.BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN),
-        },
-      });
+      return json(200, { overrides });
     } catch (err) {
       return json(500, { error: 'load failed', detail: String(err && err.message || err) });
     }
