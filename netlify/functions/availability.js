@@ -18,27 +18,26 @@ function json(status, body) {
   };
 }
 
-function storeFor(event) {
+function getBlobStore(event) {
   connectLambda(event);
+  // Prefer explicit credentials if present (more reliable across function runtimes)
+  const siteID = process.env.BLOBS_SITE_ID || process.env.SITE_ID;
+  const token = process.env.BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
+  if (siteID && token) {
+    return getStore({ name: 'availability', siteID, token });
+  }
   return getStore('availability');
 }
 
 async function loadOverrides(event) {
-  try {
-    const store = storeFor(event);
-    const data = await store.get('overrides', { type: 'json', consistency: 'strong' });
-    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
-  } catch (err) {
-    console.error('availability loadOverrides', err && err.message, err);
-    return {};
-  }
+  const store = getBlobStore(event);
+  const data = await store.get('overrides', { type: 'json' });
+  return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
 }
 
 async function saveOverrides(event, overrides) {
-  const store = storeFor(event);
-  await store.set('overrides', JSON.stringify(overrides), {
-    contentType: 'application/json',
-  });
+  const store = getBlobStore(event);
+  await store.setJSON('overrides', overrides);
 }
 
 exports.handler = async (event) => {
@@ -53,7 +52,18 @@ exports.handler = async (event) => {
   }
 
   if (event.httpMethod === 'GET') {
-    return json(200, { overrides: await loadOverrides(event) });
+    try {
+      const overrides = await loadOverrides(event);
+      return json(200, {
+        overrides,
+        diag: {
+          hasSite: Boolean(process.env.BLOBS_SITE_ID || process.env.SITE_ID),
+          hasToken: Boolean(process.env.BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN),
+        },
+      });
+    } catch (err) {
+      return json(500, { error: 'load failed', detail: String(err && err.message || err) });
+    }
   }
 
   if (event.httpMethod === 'POST') {
@@ -73,19 +83,13 @@ exports.handler = async (event) => {
       const overrides = await loadOverrides(event);
       overrides[id] = body.available;
       await saveOverrides(event, overrides);
-      // strong read-after-write
       const verify = await loadOverrides(event);
-      return json(200, {
-        ok: true,
-        id,
-        available: body.available,
-        overrides: verify,
-      });
+      return json(200, { ok: true, id, available: body.available, overrides: verify });
     } catch (err) {
-      console.error('availability save', err && err.message, err);
       return json(500, {
         error: 'Failed to save override',
         detail: String(err && err.message || err),
+        stack: String(err && err.stack || '').slice(0, 800),
       });
     }
   }
