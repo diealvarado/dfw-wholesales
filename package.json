@@ -1,0 +1,7 @@
+{
+  "name": "alvacom-homes-off-market",
+  "private": true,
+  "dependencies": {
+    "@netlify/blobs": "^11.1.0"
+  }
+}

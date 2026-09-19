@@ -1,3 +1,5 @@
+const { getStore, connectLambda } = require('@netlify/blobs');
+
 function parseCookies(header) {
   const out = {};
   if (!header) return out;
@@ -114,6 +116,24 @@ function findKey(keys, aliases) {
   return undefined;
 }
 
+/** Stable deal id — must match frontend makeId. */
+function makeId(deal) {
+  const base = deal.emailId || (deal.address + '|' + deal.emailDate + '|' + deal.price);
+  return String(base).toLowerCase();
+}
+
+async function loadOverrides(event) {
+  try {
+    connectLambda(event);
+    const store = getStore('availability');
+    const data = await store.get('overrides', { type: 'json' });
+    return data && typeof data === 'object' ? data : {};
+  } catch (err) {
+    console.error('deals loadOverrides', err && err.message);
+    return {};
+  }
+}
+
 exports.handler = async (event) => {
   const headers = {
     'Content-Type': 'application/json',
@@ -198,6 +218,8 @@ exports.handler = async (event) => {
     };
   }
 
+  const overrides = await loadOverrides(event);
+
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 10);
   cutoff.setHours(0, 0, 0, 0);
@@ -231,8 +253,14 @@ exports.handler = async (event) => {
       subject: k.subject ? clean(row[k.subject]) : '',
       emailDate: emailDateRaw,
       emailId: k.emailId ? clean(row[k.emailId]) : '',
-      available: true,
     };
+
+    deal.id = makeId(deal);
+    if (Object.prototype.hasOwnProperty.call(overrides, deal.id)) {
+      deal.available = !!overrides[deal.id];
+    } else {
+      deal.available = true;
+    }
 
     if (role === 'admin') {
       deal.sender = k.sender ? clean(row[k.sender]) : '';
