@@ -28,9 +28,9 @@ function json(statusCode, body, extraHeaders) {
 async function loadOverrides(event) {
   try {
     connectLambda(event);
-    const store = getStore('availability');
-    const data = await store.get('overrides', { type: 'json' });
-    return data && typeof data === 'object' ? data : {};
+    const store = getStore({ name: 'availability', consistency: 'strong' });
+    const data = await store.get('overrides', { type: 'json', consistency: 'strong' });
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
   } catch (err) {
     console.error('availability loadOverrides', err && err.message);
     return {};
@@ -39,8 +39,14 @@ async function loadOverrides(event) {
 
 async function saveOverrides(event, overrides) {
   connectLambda(event);
-  const store = getStore('availability');
+  const store = getStore({ name: 'availability', consistency: 'strong' });
   await store.setJSON('overrides', overrides);
+  // Read-after-write check (strong) so callers don't race eventual consistency
+  const verify = await store.get('overrides', { type: 'json', consistency: 'strong' });
+  if (!verify || verify[Object.keys(overrides).slice(-1)[0]] !== overrides[Object.keys(overrides).slice(-1)[0]]) {
+    // Fallback: rewrite once if verify looks stale
+    await store.setJSON('overrides', overrides);
+  }
 }
 
 exports.handler = async (event) => {
