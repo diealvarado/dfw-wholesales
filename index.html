@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alvacom Homes · Off-Market</title>
+  <!-- alvacom-site-v2-20260924a -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
   <link rel="apple-touch-icon" href="/favicon.png" />
@@ -47,20 +48,54 @@
   </style>
 </head>
 <body class="h-full overflow-hidden">
-  <div id="loginOverlay" class="hidden fixed inset-0 z-[2000] flex items-center justify-center bg-ink-900/70 backdrop-blur-sm px-4">
-    <form id="loginForm" class="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-slate-200 p-6">
-      <div class="font-display text-2xl font-semibold text-ink-700">Alvacom Homes</div>
-      <div class="text-[10px] uppercase tracking-[0.22em] text-slate-400 mt-0.5 mb-4">Off-Market · Private access</div>
-      <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="password">Password</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" required
-        class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600" />
-      <p id="loginError" class="hidden mt-2 text-xs text-red-600"></p>
-      <button type="submit" id="loginBtn"
-        class="mt-4 w-full text-sm font-semibold px-4 py-2.5 rounded-xl bg-ink-700 text-white hover:bg-ink-600 transition">Sign in</button>
-    </form>
+  <!-- Hidden static form so Netlify detects the "registration" form -->
+  <form name="registration" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input type="hidden" name="form-name" value="registration" />
+    <input type="text" name="bot-field" />
+    <input type="text" name="name" />
+    <input type="email" name="email" />
+    <input type="tel" name="phone" />
+  </form>
+
+  <div id="loginOverlay" class="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-900 px-4">
+    <div class="w-full max-w-sm">
+      <div class="text-center mb-6">
+        <div class="font-display text-3xl font-semibold text-white tracking-tight">Alvacom Homes</div>
+        <div class="mt-1 text-[10px] uppercase tracking-[0.22em] text-gold-400">Off-Market</div>
+      </div>
+      <form id="loginForm" class="rounded-2xl bg-white shadow-2xl border border-slate-200 p-6">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Private access</div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required
+          class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600" />
+        <p id="loginError" class="hidden mt-2 text-xs text-red-600"></p>
+        <button type="submit" id="loginBtn"
+          class="mt-4 w-full text-sm font-semibold px-4 py-2.5 rounded-xl bg-ink-700 text-white hover:bg-ink-600 transition">Sign in</button>
+        <button type="button" id="btnShowRegister"
+          class="mt-3 w-full text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-200 text-ink-700 hover:bg-slate-50 transition">Request access</button>
+      </form>
+      <form id="registerForm" class="hidden mt-4 rounded-2xl bg-white shadow-2xl border border-slate-200 p-6">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Request access</div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="regName">Full name</label>
+        <input id="regName" name="name" type="text" required autocomplete="name"
+          class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600 mb-3" />
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="regEmail">Email</label>
+        <input id="regEmail" name="email" type="email" required autocomplete="email"
+          class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600 mb-3" />
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="regPhone">Phone</label>
+        <input id="regPhone" name="phone" type="tel" required autocomplete="tel"
+          class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600" />
+        <p id="registerError" class="hidden mt-2 text-xs text-red-600"></p>
+        <p id="registerOk" class="hidden mt-2 text-xs text-emerald-700"></p>
+        <button type="submit" id="registerBtn"
+          class="mt-4 w-full text-sm font-semibold px-4 py-2.5 rounded-xl bg-ink-700 text-white hover:bg-ink-600 transition">Submit request</button>
+        <button type="button" id="btnShowLogin"
+          class="mt-3 w-full text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-200 text-ink-700 hover:bg-slate-50 transition">Back to sign in</button>
+      </form>
+    </div>
   </div>
 
-  <header class="fixed top-0 inset-x-0 z-[1100] border-b border-slate-200/80 bg-white/95 backdrop-blur">
+  <header id="appHeader" class="hidden fixed top-0 inset-x-0 z-[1100] border-b border-slate-200/80 bg-white/95 backdrop-blur">
     <div class="mx-auto max-w-[1400px] px-4 sm:px-6 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div class="min-w-0 flex items-center justify-between gap-3">
         <div>
@@ -78,6 +113,7 @@
         <button id="btnFilter" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg bg-ink-700 text-white hover:bg-ink-600 transition">Show all cities</button>
         <button id="btnMyCities" type="button" class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">My cities</button>
         <button id="btnView" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">List view</button>
+        <button id="btnRegistrations" type="button" class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">Registrations</button>
         <button id="btnLogout" type="button" class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition">Sign out</button>
       </div>
     </div>
@@ -86,10 +122,20 @@
     </div>
   </header>
 
-  <main class="h-full pt-[104px] sm:pt-[88px] relative">
+  <main id="appMain" class="hidden h-full relative">
     <div id="map"></div>
     <div id="list" class="hidden absolute inset-0 overflow-y-auto bg-ink-50 z-[1000]">
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 py-6">
+      <div id="listInner" class="mx-auto max-w-7xl px-4 sm:px-6 pb-6" style="padding-top: 1.5rem;">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <div class="text-sm font-semibold text-ink-700">Listings</div>
+          <label class="flex items-center gap-2 text-xs text-slate-500">
+            <span class="font-medium">Sort</span>
+            <select id="sortOrder" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-ink-700 focus:outline-none focus:ring-2 focus:ring-ink-600/25">
+              <option value="newest" selected>Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </label>
+        </div>
         <div id="grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
       </div>
     </div>
@@ -109,6 +155,21 @@
     </div>
     <div id="sheetBody" class="px-5 py-5"></div>
   </aside>
+
+  <div id="regsModal" class="hidden fixed inset-0 z-[2100] flex items-end sm:items-center justify-center bg-ink-900/50 px-4 py-6">
+    <div class="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden" role="dialog" aria-modal="true">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+        <div>
+          <div class="font-display text-lg font-semibold text-ink-700">Registrations</div>
+          <div class="text-xs text-slate-500">Pending and approved access requests</div>
+        </div>
+        <button type="button" id="btnRegsClose" class="text-xs font-semibold px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200">Close</button>
+      </div>
+      <div id="regsBody" class="px-5 py-4 max-h-[60vh] overflow-y-auto text-sm text-slate-600">
+        <div class="text-center py-8 text-slate-400">Loading…</div>
+      </div>
+    </div>
+  </div>
 
   <div id="filterModal" class="hidden fixed inset-0 z-[2100] flex items-end sm:items-center justify-center bg-ink-900/50 px-4 py-6">
     <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
@@ -159,7 +220,8 @@
       'Northlake',
       'Westlake',
       'Trophy Club',
-      'Colleyville'
+      'Colleyville',
+      'Richland Hills'
     ];
     const allowedSet = new Set(ALLOWED_CITIES.map(normCity));
     const ALL_DFW_CITIES = [
@@ -189,6 +251,8 @@
     let showAll = false;
     let listMode = false;
     let searchQuery = '';
+    let sortOrder = 'newest';
+    let mapReady = false;
     const MY_CITIES_KEY = 'alvacom_my_cities_v1';
     let runId = 0;
     let byId = {};
@@ -222,9 +286,11 @@
       const btnFilter = document.getElementById('btnFilter');
       const btnMy = document.getElementById('btnMyCities');
       const badge = document.getElementById('badge');
+      const btnRegs = document.getElementById('btnRegistrations');
       if (authRole === 'admin') {
         btnFilter.classList.remove('hidden');
         btnMy.classList.add('hidden');
+        if (btnRegs) btnRegs.classList.remove('hidden');
         badge.textContent = showAll ? 'All cities' : 'Target suburbs';
         badge.className = showAll
           ? 'hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800'
@@ -232,11 +298,68 @@
       } else {
         btnFilter.classList.add('hidden');
         btnMy.classList.remove('hidden');
+        if (btnRegs) btnRegs.classList.add('hidden');
         showAll = false;
         const mine = loadMyCities();
         badge.textContent = (mine && mine.length) ? ('My cities · ' + mine.length) : 'All DFW cities';
         badge.className = 'hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-ink-100 text-ink-700';
       }
+    }
+
+    function isPartialAddress(addr) {
+      const s = String(addr || '').trim();
+      if (!s) return false;
+      return !/^\d/.test(s);
+    }
+
+    function adminDetailsHtml(p, opts) {
+      opts = opts || {};
+      if (authRole !== 'admin') return '';
+      const parts = [];
+      if (p.description) {
+        const clamp = opts.clamp ? 'line-clamp-3 ' : '';
+        parts.push('<p class="' + clamp + 'text-xs text-slate-600 mt-2 whitespace-pre-wrap">' + esc(p.description) + '</p>');
+      }
+      if (p.photosUrl) {
+        parts.push('<a href="' + esc(p.photosUrl) + '" target="_blank" rel="noopener" class="inline-flex mt-2 text-xs font-semibold text-ink-700 underline hover:text-ink-600">Photos</a>');
+      }
+      if (p.imageUrl) {
+        parts.push('<img src="' + esc(p.imageUrl) + '" alt="" loading="lazy" class="mt-2 max-h-28 rounded-lg border border-slate-200 object-cover" onerror="this.style.display=\'none\'" />');
+      }
+      return parts.join('');
+    }
+
+    function syncListPad() {
+      const header = document.getElementById('appHeader');
+      const main = document.getElementById('appMain');
+      const listInner = document.getElementById('listInner');
+      if (!header || header.classList.contains('hidden')) return;
+      const h = header.offsetHeight || 104;
+      if (main) main.style.paddingTop = h + 'px';
+      if (listInner) listInner.style.paddingTop = '1.5rem';
+    }
+
+    function showAppChrome() {
+      document.getElementById('appHeader').classList.remove('hidden');
+      document.getElementById('appMain').classList.remove('hidden');
+      syncListPad();
+    }
+
+    function hideAppChrome() {
+      document.getElementById('appHeader').classList.add('hidden');
+      document.getElementById('appMain').classList.add('hidden');
+    }
+
+    function ensureMap() {
+      if (mapReady) return;
+      map = L.map('map').setView([32.7767, -96.7970], 9);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+      markerLayer = L.layerGroup().addTo(map);
+      mapReady = true;
+      setTimeout(() => { try { map.invalidateSize(); } catch (_) {} }, 40);
     }
     function openFilterModal() {
       const wrap = document.getElementById('cityChips');
@@ -317,6 +440,9 @@
     function showLogin(msg) {
       const overlay = document.getElementById('loginOverlay');
       overlay.classList.remove('hidden');
+      hideAppChrome();
+      document.getElementById('loginForm').classList.remove('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
       const err = document.getElementById('loginError');
       if (msg) {
         err.textContent = msg;
@@ -326,6 +452,8 @@
         err.textContent = '';
       }
       document.getElementById('btnLogout').classList.add('hidden');
+      const btnRegs = document.getElementById('btnRegistrations');
+      if (btnRegs) btnRegs.classList.add('hidden');
       setTimeout(() => document.getElementById('password').focus(), 50);
     }
 
@@ -333,6 +461,8 @@
       document.getElementById('loginOverlay').classList.add('hidden');
       document.getElementById('loginError').classList.add('hidden');
       document.getElementById('btnLogout').classList.remove('hidden');
+      showAppChrome();
+      ensureMap();
     }
 
     async function loadDeals() {
@@ -417,12 +547,7 @@
     }
 
     function init() {
-      map = L.map('map').setView([32.7767, -96.7970], 9);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19
-      }).addTo(map);
-      markerLayer = L.layerGroup().addTo(map);
+      // Map is initialized only after successful auth (ensureMap)
 
       document.getElementById('btnFilter').onclick = toggleFilter;
       document.getElementById('btnMyCities').onclick = openFilterModal;
@@ -461,14 +586,15 @@
         byId = {};
         lastProps = [];
         markerById = {};
-        markerLayer.clearLayers();
+        if (markerLayer) markerLayer.clearLayers();
         renderList([]);
         showLogin();
         setStatus('Signed out.');
       };
       window.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
-          if (!document.getElementById('filterModal').classList.contains('hidden')) closeFilterModal();
+          if (!document.getElementById('regsModal').classList.contains('hidden')) closeRegsModal();
+          else if (!document.getElementById('filterModal').classList.contains('hidden')) closeFilterModal();
           else closeSheet();
         }
       });
@@ -516,7 +642,175 @@
         }
       });
 
+      document.getElementById('btnShowRegister').onclick = () => {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.remove('hidden');
+        document.getElementById('registerError').classList.add('hidden');
+        document.getElementById('registerOk').classList.add('hidden');
+        setTimeout(() => document.getElementById('regName').focus(), 50);
+      };
+      document.getElementById('btnShowLogin').onclick = () => {
+        document.getElementById('registerForm').classList.add('hidden');
+        document.getElementById('loginForm').classList.remove('hidden');
+      };
+
+      document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('registerBtn');
+        const err = document.getElementById('registerError');
+        const ok = document.getElementById('registerOk');
+        const name = String(document.getElementById('regName').value || '').trim();
+        const email = String(document.getElementById('regEmail').value || '').trim();
+        const phone = String(document.getElementById('regPhone').value || '').trim();
+        err.classList.add('hidden');
+        ok.classList.add('hidden');
+        if (!name || name.length < 2) {
+          err.textContent = 'Please enter your full name.';
+          err.classList.remove('hidden');
+          return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          err.textContent = 'Please enter a valid email.';
+          err.classList.remove('hidden');
+          return;
+        }
+        const digits = phone.replace(/\D/g, '');
+        if (digits.length < 10 || digits.length > 15) {
+          err.textContent = 'Please enter a valid phone number.';
+          err.classList.remove('hidden');
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = 'Submitting…';
+        try {
+          const body = new URLSearchParams({
+            'form-name': 'registration',
+            name, email, phone
+          });
+          const netlifyPromise = fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+          }).catch(() => null);
+          const apiPromise = fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, phone })
+          });
+          const [apiResp] = await Promise.all([apiPromise, netlifyPromise]);
+          if (!apiResp.ok) {
+            let msg = 'Could not submit request.';
+            try { const j = await apiResp.json(); if (j.error) msg = j.error; } catch (_) {}
+            err.textContent = msg;
+            err.classList.remove('hidden');
+            btn.disabled = false;
+            btn.textContent = 'Submit request';
+            return;
+          }
+          ok.textContent = 'Request received. We will email you when approved.';
+          ok.classList.remove('hidden');
+          document.getElementById('regName').value = '';
+          document.getElementById('regEmail').value = '';
+          document.getElementById('regPhone').value = '';
+          btn.disabled = false;
+          btn.textContent = 'Submit request';
+        } catch (ex) {
+          err.textContent = 'Submit failed. Try again.';
+          err.classList.remove('hidden');
+          btn.disabled = false;
+          btn.textContent = 'Submit request';
+        }
+      });
+
+      document.getElementById('btnRegistrations').onclick = openRegsModal;
+      document.getElementById('btnRegsClose').onclick = closeRegsModal;
+      document.getElementById('regsModal').addEventListener('click', (e) => {
+        if (e.target.id === 'regsModal') closeRegsModal();
+      });
+
+      document.getElementById('sortOrder').addEventListener('change', (e) => {
+        sortOrder = e.target.value === 'oldest' ? 'oldest' : 'newest';
+        renderList(lastProps);
+      });
+
+      window.addEventListener('resize', syncListPad);
+
+      // Start on solid login page; only reveal map after auth
+      showLogin();
       loadDeals();
+    }
+
+    async function openRegsModal() {
+      document.getElementById('regsModal').classList.remove('hidden');
+      const body = document.getElementById('regsBody');
+      body.innerHTML = '<div class="text-center py-8 text-slate-400"><span class="spin"></span>Loading…</div>';
+      try {
+        const resp = await fetch('/api/registrations', { credentials: 'same-origin' });
+        if (!resp.ok) {
+          body.innerHTML = '<div class="text-red-600 py-6 text-center">Could not load registrations (' + resp.status + ').</div>';
+          return;
+        }
+        const data = await resp.json();
+        const list = Array.isArray(data.registrations) ? data.registrations : [];
+        if (!list.length) {
+          body.innerHTML = '<div class="text-center py-8 text-slate-400">No registrations yet.</div>';
+          return;
+        }
+        body.innerHTML = list.map(r => {
+          const status = String(r.status || 'pending');
+          const statusCls = status === 'approved'
+            ? 'bg-emerald-100 text-emerald-800'
+            : 'bg-amber-100 text-amber-800';
+          const when = r.createdAt ? new Date(r.createdAt).toLocaleString() : '';
+          const approveBtn = status === 'pending'
+            ? ('<button type="button" data-id="' + esc(r.id) + '" class="js-approve text-xs font-semibold px-3 py-1.5 rounded-lg bg-ink-700 text-white hover:bg-ink-600">Approve &amp; email</button>')
+            : '<span class="text-[11px] text-slate-400">Approved</span>';
+          return (
+            '<div class="border border-slate-200 rounded-xl p-4 mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">' +
+              '<div class="min-w-0">' +
+                '<div class="font-semibold text-ink-700">' + esc(r.name) +
+                  ' <span class="ml-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded ' + statusCls + '">' + esc(status) + '</span>' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 mt-1">' + esc(r.email) + ' · ' + esc(r.phone) + '</div>' +
+                (when ? '<div class="text-[11px] text-slate-400 mt-0.5">' + esc(when) + '</div>' : '') +
+              '</div>' +
+              '<div class="shrink-0">' + approveBtn + '</div>' +
+            '</div>'
+          );
+        }).join('');
+        body.querySelectorAll('.js-approve').forEach(btn => {
+          btn.addEventListener('click', () => approveRegistration(btn.getAttribute('data-id'), btn));
+        });
+      } catch (err) {
+        body.innerHTML = '<div class="text-red-600 py-6 text-center">Load failed.</div>';
+      }
+    }
+
+    function closeRegsModal() {
+      document.getElementById('regsModal').classList.add('hidden');
+    }
+
+    async function approveRegistration(id, btn) {
+      if (!id) return;
+      if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+      try {
+        const resp = await fetch('/api/registrations/approve', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          alert((data && data.error) || ('Approve failed (' + resp.status + ')'));
+          if (btn) { btn.disabled = false; btn.textContent = 'Approve & email'; }
+          return;
+        }
+        openRegsModal();
+      } catch (err) {
+        alert('Approve failed');
+        if (btn) { btn.disabled = false; btn.textContent = 'Approve & email'; }
+      }
     }
 
     function toggleFilter() {
@@ -556,7 +850,7 @@
       opts = opts || {};
       const my = ++runId;
       if (!allDeals.length) {
-        markerLayer.clearLayers();
+        if (markerLayer) markerLayer.clearLayers();
         lastProps = [];
         renderList([]);
         setStatus('0 listings for this filter.');
@@ -597,7 +891,11 @@
           subject: d.subject || '',
           emailId: d.emailId || '',
           available: d.available !== false,
-          id: d.id || ''
+          id: d.id || '',
+          description: d.description || '',
+          photosUrl: d.photosUrl || '',
+          imageUrl: d.imageUrl || '',
+          partialAddress: isPartialAddress(address)
         };
         if (!p.id) p.id = makeId(p);
         if (!matchesSearch(p, searchQuery)) continue;
@@ -614,7 +912,7 @@
       lastProps = props;
 
       if (!props.length) {
-        markerLayer.clearLayers();
+        if (markerLayer) markerLayer.clearLayers();
         renderList([]);
         setStatus('0 listings for this filter.');
         return;
@@ -663,16 +961,21 @@
       const unavailNote = p.available === false
         ? '<div class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Unavailable</div>'
         : '';
+      const partialNote = p.partialAddress
+        ? '<div class="text-[10px] font-semibold uppercase tracking-wide text-amber-700 mb-1">Partial address</div>'
+        : '';
       const wrap = document.createElement('div');
       wrap.className = 'text-sm leading-snug';
       wrap.innerHTML =
         unavailNote +
+        partialNote +
         '<div class="font-semibold text-slate-800 mb-1">' + esc(fullLine(p)) + '</div>' +
         '<div class="font-bold text-ink-600 mb-1">' + esc(money(p.price)) + '</div>' +
         (facts ? '<div class="text-xs text-slate-600 mb-1">' + esc(facts) + '</div>' : '') +
         '<div class="mb-2">' + availBadgeHtml(p, { interactive: true }) + '</div>' +
         wholesalerLine +
-        '<button type="button" class="text-xs font-semibold px-2.5 py-1.5 rounded-md bg-ink-700 text-white">Open brief</button>';
+        adminDetailsHtml(p, { clamp: true }) +
+        '<button type="button" class="mt-2 text-xs font-semibold px-2.5 py-1.5 rounded-md bg-ink-700 text-white">Open brief</button>';
       wrap.querySelector('button').addEventListener('click', () => openSheet(p.id));
       bindAvailCheckboxes(wrap);
       return wrap;
@@ -695,6 +998,7 @@
     }
 
     async function plotMarkers(props, my) {
+      if (!mapReady || !markerLayer) return;
       markerLayer.clearLayers();
       markerById = {};
       const bounds = [];
@@ -717,6 +1021,7 @@
     }
 
     function rebuildMarkersFromCache(props) {
+      if (!mapReady || !markerLayer) return;
       markerLayer.clearLayers();
       markerById = {};
       const bounds = [];
@@ -753,11 +1058,25 @@
           '</section>')
         : '';
 
+      const adminExtraSection = (authRole === 'admin' && (p.description || p.photosUrl || p.imageUrl))
+        ? ('<section class="mb-5">' +
+            '<h3 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 mb-2">Listing details</h3>' +
+            (p.description ? '<p class="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap mb-3">' + esc(p.description) + '</p>' : '') +
+            (p.photosUrl ? '<a href="' + esc(p.photosUrl) + '" target="_blank" rel="noopener" class="inline-flex text-xs font-semibold text-ink-700 underline hover:text-ink-600 mb-3">Photos</a>' : '') +
+            (p.imageUrl ? '<div><img src="' + esc(p.imageUrl) + '" alt="" loading="lazy" class="max-h-48 rounded-xl border border-slate-200 object-cover" onerror="this.style.display=\'none\'" /></div>' : '') +
+          '</section>')
+        : '';
+
+      const partialBadge = p.partialAddress
+        ? '<span class="inline-block mt-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-200 text-amber-900">Partial address</span>'
+        : '';
+
       document.getElementById('sheetBody').innerHTML =
         '<div class="border border-slate-200 rounded-2xl overflow-hidden mb-5">' +
           '<div class="bg-ink-700 text-white px-5 py-4">' +
             '<div class="font-display text-2xl font-semibold leading-tight">' + esc(p.address) + '</div>' +
             '<div class="text-sm text-white/80 mt-1">' + esc([p.city, p.state, p.zip].filter(Boolean).join(', ')) + '</div>' +
+            partialBadge +
             '<div class="mt-3 text-2xl font-bold text-gold-400">' + esc(money(p.price)) + '</div>' +
             '<div class="mt-2 no-print">' +
               (authRole === 'admin'
@@ -779,6 +1098,7 @@
           (p.subject ? '<p class="mt-2 text-xs text-slate-500"><span class="font-semibold text-slate-600">Subject:</span> ' + esc(p.subject) + '</p>' : '') +
         '</section>' +
         wholesalerSection +
+        adminExtraSection +
         '<div class="no-print flex flex-col sm:flex-row gap-2 mb-6">' +
           '<a href="' + maps + '" target="_blank" rel="noopener" class="flex-1 text-center text-xs font-semibold px-4 py-3 rounded-xl bg-ink-700 text-white hover:bg-ink-600">Google Maps</a>' +
           (street ? '<a href="' + street + '" target="_blank" rel="noopener" class="flex-1 text-center text-xs font-semibold px-4 py-3 rounded-xl border border-slate-200 hover:bg-slate-50">Street View</a>' : '') +
@@ -809,11 +1129,22 @@
         grid.innerHTML = '<div class="col-span-full text-center text-slate-500 py-16">No listings match this filter.</div>';
         return;
       }
-      grid.innerHTML = props.map(p => {
+      const sorted = props.slice().sort((a, b) => {
+        const da = parseDate(a.emailDate);
+        const db = parseDate(b.emailDate);
+        const ma = da ? da.getTime() : 0;
+        const mb = db ? db.getTime() : 0;
+        return sortOrder === 'oldest' ? (ma - mb) : (mb - ma);
+      });
+      grid.innerHTML = sorted.map(p => {
         const dateObj = parseDate(p.emailDate);
         const dateStr = dateObj ? dateObj.toLocaleDateString() : (p.emailDate || '');
         const facts = [p.beds && (p.beds + ' bd'), p.baths && (p.baths + ' ba'), p.sqft && (p.sqft + ' sf')].filter(Boolean).join(' · ');
         const unavail = p.available === false;
+        const badges =
+          (unavail ? '<span class="inline-block mb-2 mr-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-slate-200 text-slate-600">Unavailable</span>' : '') +
+          (p.partialAddress ? '<span class="inline-block mb-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-100 text-amber-800">Partial address</span>' : '');
+        const blurb = (p.description || p.comments || p.subject || '').slice(0, 180);
         return (
           '<article class="rounded-2xl border shadow-sm hover:shadow-md transition p-5 flex flex-col justify-between ' +
             (unavail ? 'card-unavail border-slate-300' : 'bg-white border-slate-200') + '">' +
@@ -822,13 +1153,14 @@
                 '<h3 class="font-display text-xl font-semibold text-ink-700 leading-snug">' + esc(p.address) + '</h3>' +
                 '<span class="shrink-0 text-sm font-bold text-gold-600 bg-amber-50 px-2.5 py-1 rounded-lg">' + esc(money(p.price)) + '</span>' +
               '</div>' +
-              (unavail ? '<span class="inline-block mb-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-slate-200 text-slate-600">Unavailable</span>' : '') +
+              badges +
               '<p class="text-sm text-slate-500 mb-3">' + esc([p.city, p.state, p.zip].filter(Boolean).join(', ')) + '</p>' +
               (facts ? '<p class="text-xs font-medium text-ink-600 mb-1">' + esc(facts) + '</p>' : '') +
               '<div class="mb-3">' + availBadgeHtml(p, { interactive: true }) + '</div>' +
-              '<p class="text-xs text-slate-500 line-clamp-3 mb-4">' + esc((p.comments || p.subject || '').slice(0, 180)) + '</p>' +
+              (blurb ? '<p class="text-xs text-slate-500 line-clamp-3 mb-2">' + esc(blurb) + '</p>' : '') +
+              adminDetailsHtml(p, { clamp: true }) +
             '</div>' +
-            '<div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">' +
+            '<div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 mt-3">' +
               '<span class="text-[11px] text-slate-400">' + esc(dateStr) + '</span>' +
               '<button type="button" data-id="' + esc(p.id) + '" class="js-open text-xs font-semibold px-3 py-2 rounded-lg bg-ink-700 text-white hover:bg-ink-600">One-pager</button>' +
             '</div>' +
@@ -839,6 +1171,7 @@
         btn.addEventListener('click', () => openSheet(btn.getAttribute('data-id')));
       });
       bindAvailCheckboxes(grid);
+      syncListPad();
     }
 
     window.addEventListener('DOMContentLoaded', init);
