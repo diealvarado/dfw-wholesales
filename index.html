@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alvacom Homes · Off-Market</title>
-  <!-- alvacom-site-v2-20260924d -->
+  <!-- alvacom-site-v2-20260924e -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
   <link rel="apple-touch-icon" href="/favicon.png" />
@@ -1130,6 +1130,9 @@
         return;
       }
 
+      // Show list cards immediately (do not wait for geocode)
+      renderList(props);
+      syncListPad();
       setStatus('<span class="spin"></span>Mapping ' + props.length + ' listings…');
       await plotMarkers(props, my);
       if (my !== runId) return;
@@ -1386,6 +1389,7 @@
       syncListPad();
     }
 
+    window.__alvacom = { syncListPad, getPad: () => getComputedStyle(document.documentElement).getPropertyValue('--app-header-h') };
     window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
