@@ -231,19 +231,18 @@ exports.handler = async (event) => {
   cutoff.setDate(cutoff.getDate() - 10);
   cutoff.setHours(0, 0, 0, 0);
 
+  // Scan ALL rows in the 10-day window. Do NOT early-break on "older streak":
+  // after reparses the sheet is often not strictly newest-first (updates-in-place
+  // leave older rows above newer inserts), which previously capped /api/deals at ~2.
   const deals = [];
-  let olderStreak = 0;
   for (const row of rawRows) {
     const address = clean(row[k.address]);
     if (!address) continue;
     const emailDateRaw = clean(row[k.date]);
     const emailDate = parseDate(emailDateRaw);
     if (!emailDate || emailDate < cutoff) {
-      olderStreak += 1;
-      if (olderStreak >= 40 && deals.length) break;
       continue;
     }
-    olderStreak = 0;
 
     const deal = {
       address,
