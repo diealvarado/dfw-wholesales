@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alvacom Homes · Off-Market</title>
-  <!-- alvacom-site-v2-20260924a -->
+  <!-- alvacom-site-v2-20260924b -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
   <link rel="apple-touch-icon" href="/favicon.png" />
@@ -48,13 +48,13 @@
   </style>
 </head>
 <body class="h-full overflow-hidden">
-  <!-- Hidden static form so Netlify detects the "registration" form -->
-  <form name="registration" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <!-- Static form for Netlify Forms detection (visually hidden) -->
+  <form name="registration" method="POST" action="/" data-netlify="true" netlify netlify-honeypot="bot-field" class="hidden" aria-hidden="true" style="display:none">
     <input type="hidden" name="form-name" value="registration" />
-    <input type="text" name="bot-field" />
-    <input type="text" name="name" />
-    <input type="email" name="email" />
-    <input type="tel" name="phone" />
+    <p class="hidden"><label>Don't fill this out: <input name="bot-field" /></label></p>
+    <label>Full name <input type="text" name="name" /></label>
+    <label>Email <input type="email" name="email" /></label>
+    <label>Phone <input type="tel" name="phone" /></label>
   </form>
 
   <div id="loginOverlay" class="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-900 px-4">
