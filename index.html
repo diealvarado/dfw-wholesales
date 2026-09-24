@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alvacom Homes · Off-Market</title>
-  <!-- alvacom-site-v2-20260924c -->
+  <!-- alvacom-site-v2-20260924d -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
   <link rel="apple-touch-icon" href="/favicon.png" />
@@ -33,7 +33,15 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     html, body { height:100%; margin:0; font-family:'DM Sans', system-ui, sans-serif; background:#f5f7fa; color:#0f243c; }
+    :root { --app-header-h: 120px; }
     #map { height:100%; width:100%; }
+    #list {
+      /* absolute inset-0 ignores main padding — pad the scroll container itself */
+      padding-top: var(--app-header-h);
+      scroll-padding-top: var(--app-header-h);
+      box-sizing: border-box;
+    }
+    #listInner { padding-top: 1.25rem; }
     .spin { display:inline-block; width:12px; height:12px; border:2px solid #d5deea; border-top-color:#1e3a5f; border-radius:50%; animation:spin .75s linear infinite; vertical-align:-1px; margin-right:6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .line-clamp-3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
@@ -111,6 +119,16 @@
         </label>
         <span id="badge" class="hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-ink-100 text-ink-700">Target suburbs</span>
         <button id="btnFilter" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg bg-ink-700 text-white hover:bg-ink-600 transition">Show all cities</button>
+        <div id="senderFilterWrap" class="hidden relative">
+          <button id="btnSenderFilter" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">Senders</button>
+          <div id="senderDropdown" class="hidden absolute right-0 mt-1 z-[1200] w-72 max-h-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between gap-2">
+              <span class="text-xs font-semibold text-ink-700">Filter by sender</span>
+              <button type="button" id="btnSenderAll" class="text-[11px] font-semibold text-ink-600 hover:underline">All senders</button>
+            </div>
+            <div id="senderChips" class="px-2 py-2 max-h-56 overflow-y-auto text-sm"></div>
+          </div>
+        </div>
         <button id="btnMyCities" type="button" class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">My cities</button>
         <button id="btnView" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">List view</button>
         <button id="btnRegistrations" type="button" class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">Registrations</button>
@@ -125,7 +143,7 @@
   <main id="appMain" class="hidden h-full relative">
     <div id="map"></div>
     <div id="list" class="hidden absolute inset-0 overflow-y-auto bg-ink-50 z-[1000]">
-      <div id="listInner" class="mx-auto max-w-7xl px-4 sm:px-6 pb-6" style="padding-top: 1.5rem;">
+      <div id="listInner" class="mx-auto max-w-7xl px-4 sm:px-6 pb-6">
         <div class="flex items-center justify-between gap-3 mb-4">
           <div class="text-sm font-semibold text-ink-700">Listings</div>
           <label class="flex items-center gap-2 text-xs text-slate-500">
@@ -253,6 +271,9 @@
     let searchQuery = '';
     let sortOrder = 'newest';
     let mapReady = false;
+    const SENDER_FILTER_KEY = 'alvacom_sender_filter_v1';
+    // null = all senders; Set of friendly keys when filtering
+    let senderFilterKeys = null;
     const MY_CITIES_KEY = 'alvacom_my_cities_v1';
     let runId = 0;
     let byId = {};
@@ -274,6 +295,143 @@
       if (!cities || !cities.length) localStorage.removeItem(MY_CITIES_KEY);
       else localStorage.setItem(MY_CITIES_KEY, JSON.stringify(cities));
     }
+
+    /** Normalize raw From: header → friendly wholesaler key + label */
+    function friendlySender(raw) {
+      const s = String(raw || '').trim();
+      if (!s) return { key: 'unknown', label: 'Unknown' };
+      let email = '';
+      let display = '';
+      const m = s.match(/^(.*?)\s*<([^>]+)>\s*$/);
+      if (m) {
+        display = m[1].replace(/^["']|["']$/g, '').trim();
+        email = m[2].trim().toLowerCase();
+      } else if (s.includes('@')) {
+        email = s.toLowerCase();
+      } else {
+        display = s;
+      }
+      const domain = email.includes('@') ? email.split('@').pop() : '';
+      const rules = [
+        [/newwestern\.com$/i, 'new-western', 'New Western'],
+        [/southernhills/i, 'southern-hills', 'Southern Hills'],
+        [/baysrealestate\.com$/i, 'bays', 'Bays'],
+        [/prophethomes/i, 'prophet-homes', 'Prophet Homes'],
+        [/myershomebuyers/i, 'myers', 'Myers'],
+        [/diamondacquisitions/i, 'diamond', 'Diamond Acquisitions'],
+        [/alphahomebuyers/i, 'alpha', 'Alpha Home Buyers'],
+        [/momentumcapital|dfwinvestments/i, 'momentum', 'Momentum Capital'],
+        [/keyglee/i, 'keyglee', 'KeyGlee'],
+        [/aaragon/i, 'aaragon', 'Aaragon Properties'],
+        [/investorlift/i, 'investorlift', 'Investorlift'],
+        [/legacybuyers/i, 'legacy', 'Legacy Home Buyers'],
+        [/equitycashoffer/i, 'equity-cash', 'Equity Cash Offer'],
+        [/texasprimeinvestments/i, 'texas-prime', 'Texas Prime'],
+        [/zenoinvestments/i, 'zeno', 'Zeno Investments'],
+        [/ascendhomebuyers/i, 'ascend', 'Ascend Homebuyers'],
+        [/ateamhomebuyers/i, 'a-team', 'A-Team Home Buyers'],
+        [/tracehoward|exprealty.*howard|haley\.howard/i, 'howard', 'Howard / eXp'],
+        [/ccsend\.com$/i, null, null] // fall through to display/domain
+      ];
+      for (const [re, key, label] of rules) {
+        if (re.test(domain) || re.test(email) || re.test(s)) {
+          if (key) return { key, label };
+        }
+      }
+      if (display) {
+        const key = display.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'other';
+        return { key, label: display };
+      }
+      if (domain) {
+        const base = domain.replace(/\.ccsend\.com$/i, '').split('.')[0];
+        const label = base.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        return { key: base.toLowerCase(), label: label || domain };
+      }
+      return { key: 'other', label: s.slice(0, 40) };
+    }
+
+    function loadSenderFilter() {
+      try {
+        const raw = localStorage.getItem(SENDER_FILTER_KEY);
+        if (!raw) return null;
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr) || !arr.length) return null;
+        return new Set(arr.map(String));
+      } catch (e) { return null; }
+    }
+    function saveSenderFilter(set) {
+      if (!set || !set.size) localStorage.removeItem(SENDER_FILTER_KEY);
+      else localStorage.setItem(SENDER_FILTER_KEY, JSON.stringify([...set]));
+    }
+    function getSenderCounts(deals) {
+      const counts = new Map();
+      (deals || []).forEach(d => {
+        const f = friendlySender(d.sender);
+        const prev = counts.get(f.key) || { key: f.key, label: f.label, count: 0 };
+        prev.count += 1;
+        if (!prev.label) prev.label = f.label;
+        counts.set(f.key, prev);
+      });
+      return [...counts.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+    }
+    function syncSenderBtn() {
+      const btn = document.getElementById('btnSenderFilter');
+      if (!btn) return;
+      if (!senderFilterKeys || !senderFilterKeys.size) {
+        btn.textContent = 'Senders';
+        btn.className = 'text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition';
+      } else {
+        btn.textContent = 'Senders · ' + senderFilterKeys.size;
+        btn.className = 'text-xs font-semibold px-3 py-2 rounded-lg border border-ink-600 bg-ink-50 text-ink-800 hover:bg-ink-100 transition';
+      }
+    }
+    function renderSenderDropdown() {
+      const wrap = document.getElementById('senderChips');
+      if (!wrap) return;
+      const rows = getSenderCounts(allDeals);
+      if (!rows.length) {
+        wrap.innerHTML = '<div class="px-2 py-3 text-xs text-slate-400">No senders yet.</div>';
+        return;
+      }
+      const selected = senderFilterKeys; // null = all checked
+      wrap.innerHTML = rows.map(r => {
+        const checked = !selected || selected.has(r.key);
+        return '<label class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 cursor-pointer">' +
+          '<input type="checkbox" class="js-sender rounded border-slate-300 text-ink-700 focus:ring-ink-600" data-key="' + esc(r.key) + '"' + (checked ? ' checked' : '') + ' />' +
+          '<span class="flex-1 text-xs text-ink-700 truncate">' + esc(r.label) + '</span>' +
+          '<span class="text-[11px] text-slate-400 tabular-nums">' + r.count + '</span>' +
+          '</label>';
+      }).join('');
+      wrap.querySelectorAll('.js-sender').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const boxes = [...wrap.querySelectorAll('.js-sender')];
+          const on = boxes.filter(b => b.checked).map(b => b.getAttribute('data-key'));
+          if (on.length === boxes.length) {
+            senderFilterKeys = null;
+            saveSenderFilter(null);
+          } else {
+            senderFilterKeys = new Set(on);
+            saveSenderFilter(senderFilterKeys);
+          }
+          syncSenderBtn();
+          processRows({ reuseGeo: true });
+        });
+      });
+    }
+    function openSenderDropdown() {
+      renderSenderDropdown();
+      document.getElementById('senderDropdown').classList.remove('hidden');
+    }
+    function closeSenderDropdown() {
+      const el = document.getElementById('senderDropdown');
+      if (el) el.classList.add('hidden');
+    }
+    function matchesSenderFilter(p) {
+      if (authRole !== 'admin') return true;
+      if (!senderFilterKeys || !senderFilterKeys.size) return true;
+      const f = friendlySender(p.sender);
+      return senderFilterKeys.has(f.key);
+    }
     function getActiveCitySet() {
       if (authRole !== 'admin') {
         const mine = loadMyCities();
@@ -287,10 +445,13 @@
       const btnMy = document.getElementById('btnMyCities');
       const badge = document.getElementById('badge');
       const btnRegs = document.getElementById('btnRegistrations');
+      const senderWrap = document.getElementById('senderFilterWrap');
       if (authRole === 'admin') {
         btnFilter.classList.remove('hidden');
         btnMy.classList.add('hidden');
         if (btnRegs) btnRegs.classList.remove('hidden');
+        if (senderWrap) senderWrap.classList.remove('hidden');
+        syncSenderBtn();
         badge.textContent = showAll ? 'All cities' : 'Target suburbs';
         badge.className = showAll
           ? 'hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800'
@@ -299,6 +460,8 @@
         btnFilter.classList.add('hidden');
         btnMy.classList.remove('hidden');
         if (btnRegs) btnRegs.classList.add('hidden');
+        if (senderWrap) senderWrap.classList.add('hidden');
+        closeSenderDropdown();
         showAll = false;
         const mine = loadMyCities();
         badge.textContent = (mine && mine.length) ? ('My cities · ' + mine.length) : 'All DFW cities';
@@ -329,20 +492,41 @@
       return parts.join('');
     }
 
+    let headerPadObserver = null;
     function syncListPad() {
       const header = document.getElementById('appHeader');
-      const main = document.getElementById('appMain');
-      const listInner = document.getElementById('listInner');
       if (!header || header.classList.contains('hidden')) return;
-      const h = header.offsetHeight || 104;
+      // Measure the fixed header (may be 1 or 2+ rows when filters wrap)
+      const h = Math.ceil(header.getBoundingClientRect().height || header.offsetHeight || 120);
+      document.documentElement.style.setProperty('--app-header-h', h + 'px');
+      // Map sits under the fixed header — offset main so tiles aren't covered
+      const main = document.getElementById('appMain');
       if (main) main.style.paddingTop = h + 'px';
-      if (listInner) listInner.style.paddingTop = '1.5rem';
+      // #list is absolute inset-0 (ignores main padding); its own padding-top
+      // uses --app-header-h via CSS so the first card clears the header.
+    }
+    function startHeaderPadObserver() {
+      const header = document.getElementById('appHeader');
+      if (!header) return;
+      syncListPad();
+      if (headerPadObserver) return;
+      if (typeof ResizeObserver !== 'undefined') {
+        headerPadObserver = new ResizeObserver(() => syncListPad());
+        headerPadObserver.observe(header);
+      }
+      window.addEventListener('resize', syncListPad);
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => syncListPad()).catch(() => {});
+      }
     }
 
     function showAppChrome() {
       document.getElementById('appHeader').classList.remove('hidden');
       document.getElementById('appMain').classList.remove('hidden');
-      syncListPad();
+      startHeaderPadObserver();
+      requestAnimationFrame(() => syncListPad());
+      setTimeout(syncListPad, 50);
+      setTimeout(syncListPad, 250);
     }
 
     function hideAppChrome() {
@@ -543,7 +727,7 @@
     function refreshVisible() {
       renderList(lastProps);
       rebuildMarkersFromCache(lastProps);
-      setStatus(lastProps.length + ' listings' + (searchQuery ? ' (search)' : '') + (authRole !== 'admin' && loadMyCities() ? ' · my cities' : ''));
+      setStatus(lastProps.length + ' listings' + (searchQuery ? ' (search)' : '') + (authRole === 'admin' && senderFilterKeys ? ' · senders' : '') + (authRole !== 'admin' && loadMyCities() ? ' · my cities' : ''));
     }
 
     function init() {
@@ -594,6 +778,7 @@
       window.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
           if (!document.getElementById('regsModal').classList.contains('hidden')) closeRegsModal();
+          else if (!document.getElementById('senderDropdown').classList.contains('hidden')) closeSenderDropdown();
           else if (!document.getElementById('filterModal').classList.contains('hidden')) closeFilterModal();
           else closeSheet();
         }
@@ -733,7 +918,26 @@
         renderList(lastProps);
       });
 
-      window.addEventListener('resize', syncListPad);
+      senderFilterKeys = loadSenderFilter();
+
+      document.getElementById('btnSenderFilter').onclick = (e) => {
+        e.stopPropagation();
+        const dd = document.getElementById('senderDropdown');
+        if (dd.classList.contains('hidden')) openSenderDropdown();
+        else closeSenderDropdown();
+      };
+      document.getElementById('btnSenderAll').onclick = (e) => {
+        e.stopPropagation();
+        senderFilterKeys = null;
+        saveSenderFilter(null);
+        syncSenderBtn();
+        renderSenderDropdown();
+        processRows({ reuseGeo: true });
+      };
+      document.addEventListener('click', (e) => {
+        const wrap = document.getElementById('senderFilterWrap');
+        if (wrap && !wrap.contains(e.target)) closeSenderDropdown();
+      });
 
       // Start on solid login page; only reveal map after auth
       showLogin();
@@ -838,11 +1042,17 @@
         btn.textContent = 'Map view';
         mapEl.classList.add('hidden');
         list.classList.remove('hidden');
+        syncListPad();
+        requestAnimationFrame(() => {
+          syncListPad();
+          const listEl = document.getElementById('list');
+          if (listEl) listEl.scrollTop = 0;
+        });
       } else {
         btn.textContent = 'List view';
         list.classList.add('hidden');
         mapEl.classList.remove('hidden');
-        setTimeout(() => map.invalidateSize(), 40);
+        setTimeout(() => { if (map) map.invalidateSize(); }, 40);
       }
     }
 
@@ -895,10 +1105,12 @@
           description: d.description || '',
           photosUrl: d.photosUrl || '',
           imageUrl: d.imageUrl || '',
-          partialAddress: isPartialAddress(address)
+          partialAddress: isPartialAddress(address),
+          senderKey: friendlySender(d.sender || '').key
         };
         if (!p.id) p.id = makeId(p);
         if (!matchesSearch(p, searchQuery)) continue;
+        if (!matchesSenderFilter(p)) continue;
         if (geoCache[p.id]) {
           p.lat = geoCache[p.id].lat;
           p.lon = geoCache[p.id].lon;
@@ -922,7 +1134,7 @@
       await plotMarkers(props, my);
       if (my !== runId) return;
       renderList(props);
-      setStatus(props.length + ' listings' + (searchQuery ? ' (search)' : '') + (authRole !== 'admin' && loadMyCities() ? ' · my cities' : ''));
+      setStatus(props.length + ' listings' + (searchQuery ? ' (search)' : '') + (authRole === 'admin' && senderFilterKeys ? ' · senders' : '') + (authRole !== 'admin' && loadMyCities() ? ' · my cities' : ''));
 
       if (location.hash.startsWith('#p=')) {
         const id = decodeURIComponent(location.hash.slice(3));
