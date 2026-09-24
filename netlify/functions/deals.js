@@ -209,6 +209,9 @@ exports.handler = async (event) => {
     comments: findKey(keys, ['comments', 'comment']),
     subject: findKey(keys, ['emailsubject', 'subject']),
     emailId: findKey(keys, ['emailid', 'messageid', 'id']),
+    description: findKey(keys, ['description']),
+    photosUrl: findKey(keys, ['photoslink', 'photosurl', 'photos']),
+    imageUrl: findKey(keys, ['imageurl', 'image', 'imgurl', 'thumbnail']),
   };
 
   if (!k.address || !k.date) {
@@ -268,6 +271,12 @@ exports.handler = async (event) => {
 
     if (role === 'admin') {
       deal.sender = k.sender ? clean(row[k.sender]) : '';
+      const description = k.description ? clean(row[k.description]) : '';
+      const photosUrl = k.photosUrl ? clean(row[k.photosUrl]) : '';
+      const imageUrl = k.imageUrl ? clean(row[k.imageUrl]) : '';
+      if (description) deal.description = description;
+      if (photosUrl) deal.photosUrl = photosUrl;
+      if (imageUrl) deal.imageUrl = imageUrl;
     } else {
       deal.sender = null;
       // Investors never see deals marked unavailable by admin
