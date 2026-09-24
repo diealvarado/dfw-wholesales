@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alvacom Homes · Off-Market</title>
-  <!-- alvacom-site-v2-20260924e -->
+  <!-- alvacom-site-v2-20260924f -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
   <link rel="apple-touch-icon" href="/favicon.png" />
@@ -475,7 +475,34 @@
       return !/^\d/.test(s);
     }
 
+    function normText(s) {
+      return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+    /** True if a and b are the same or one starts with/contains the other (first ~80 chars). */
+    function textOverlaps(a, b) {
+      const na = normText(a);
+      const nb = normText(b);
+      if (!na || !nb) return false;
+      const a80 = na.slice(0, 80);
+      const b80 = nb.slice(0, 80);
+      if (a80 === b80) return true;
+      if (na.startsWith(b80) || nb.startsWith(a80)) return true;
+      if (na.includes(b80) || nb.includes(a80)) return true;
+      return false;
+    }
+    function cardBlurb(p) {
+      const comments = p.comments || '';
+      const subject = p.subject || '';
+      const secondary = comments || subject;
+      if (authRole === 'admin' && p.description) {
+        // Prefer admin Description block; skip comments/subject if redundant
+        if (!secondary || textOverlaps(p.description, secondary)) return '';
+        return secondary.slice(0, 180);
+      }
+      return (comments || subject || '').slice(0, 180);
+    }
     function adminDetailsHtml(p, opts) {
+
       opts = opts || {};
       if (authRole !== 'admin') return '';
       const parts = [];
@@ -1259,7 +1286,13 @@
       history.replaceState(null, '', '#p=' + encodeURIComponent(id));
       const dateObj = parseDate(p.emailDate);
       const dateStr = dateObj ? dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.emailDate || '—');
-      const blurb = p.comments || p.subject || 'Off-market opportunity sourced from wholesaler inventory.';
+      let blurb = p.comments || p.subject || '';
+      if (authRole === 'admin' && p.description && blurb && textOverlaps(p.description, blurb)) {
+        blurb = ''; // shown once in admin Listing details
+      }
+      if (!blurb && !(authRole === 'admin' && p.description)) {
+        blurb = 'Off-market opportunity sourced from wholesaler inventory.';
+      }
       const maps = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(fullLine(p));
       const street = (p.lat && p.lon) ? ('https://www.google.com/maps?layer=c&cbll=' + p.lat + ',' + p.lon + '&cbp=12,0,0,0,0') : '';
       const availColor = p.available !== false ? 'text-emerald-300' : 'text-slate-300';
@@ -1307,11 +1340,15 @@
             pill('Year', p.year) + pill('Garage', p.garage) + pill('Listed', dateStr) +
           '</div>' +
         '</div>' +
-        '<section class="mb-5">' +
-          '<h3 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 mb-2">From the deal email</h3>' +
-          '<p class="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">' + esc(blurb) + '</p>' +
-          (p.subject ? '<p class="mt-2 text-xs text-slate-500"><span class="font-semibold text-slate-600">Subject:</span> ' + esc(p.subject) + '</p>' : '') +
-        '</section>' +
+        ((blurb || (p.subject && !(authRole === 'admin' && p.description && textOverlaps(p.description, p.subject))))
+          ? ('<section class="mb-5">' +
+              '<h3 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 mb-2">From the deal email</h3>' +
+              (blurb ? '<p class="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">' + esc(blurb) + '</p>' : '') +
+              (p.subject && !(authRole === 'admin' && p.description && textOverlaps(p.description, p.comments || p.subject))
+                ? '<p class="mt-2 text-xs text-slate-500"><span class="font-semibold text-slate-600">Subject:</span> ' + esc(p.subject) + '</p>'
+                : '') +
+            '</section>')
+          : '') +
         wholesalerSection +
         adminExtraSection +
         '<div class="no-print flex flex-col sm:flex-row gap-2 mb-6">' +
@@ -1359,7 +1396,7 @@
         const badges =
           (unavail ? '<span class="inline-block mb-2 mr-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-slate-200 text-slate-600">Unavailable</span>' : '') +
           (p.partialAddress ? '<span class="inline-block mb-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-100 text-amber-800">Partial address</span>' : '');
-        const blurb = (p.description || p.comments || p.subject || '').slice(0, 180);
+        const blurb = cardBlurb(p);
         return (
           '<article class="rounded-2xl border shadow-sm hover:shadow-md transition p-5 flex flex-col justify-between ' +
             (unavail ? 'card-unavail border-slate-300' : 'bg-white border-slate-200') + '">' +
