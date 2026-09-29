@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /site/
+Disallow: /api/
+Disallow: /netlify/
+
+Sitemap: https://alvacomhomes.netlify.app/sitemap.xml

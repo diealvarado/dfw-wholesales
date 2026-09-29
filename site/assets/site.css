@@ -1,0 +1,84 @@
+:root {
+  --ink: #0f243c;
+  --ink-2: #16304f;
+  --gold: #c9a227;
+  --cream: #f4efe4;
+  --paper: #f7f4ee;
+  --muted: #5c6b7a;
+  --line: #e4dccb;
+  --white: #fff;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: "DM Sans", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.55;
+}
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+.wrap { width: min(1120px, calc(100% - 2.4rem)); margin-inline: auto; }
+.nav {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding: 1rem 0;
+}
+.brand { font-family: "Cormorant Garamond", Georgia, serif; font-size: 1.55rem; font-weight: 600; letter-spacing: -.02em; text-decoration: none; }
+.brand span { display: block; font-family: "DM Sans", sans-serif; font-size: .62rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); font-weight: 600; }
+.links { display: flex; flex-wrap: wrap; gap: .9rem 1.1rem; font-size: .86rem; }
+.links a { text-decoration: none; color: var(--ink-2); }
+.links a:hover { color: var(--gold); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--ink); color: var(--white); text-decoration: none;
+  padding: .85rem 1.15rem; border-radius: 999px; font-size: .9rem; font-weight: 600;
+  border: 1px solid var(--ink);
+}
+.btn.gold { background: var(--gold); border-color: var(--gold); color: var(--ink); }
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn.light { background: var(--white); color: var(--ink); border-color: rgba(255,255,255,.35); }
+.hero {
+  background: linear-gradient(135deg, #0a1624 0%, #16304f 58%, #1e3a5f 100%);
+  color: var(--white); padding: 4.2rem 0 4.6rem;
+}
+.hero h1, h1, h2, h3 { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; letter-spacing: -.02em; line-height: 1.12; }
+.hero h1 { font-size: clamp(2.2rem, 5vw, 4.2rem); margin: .4rem 0 1rem; max-width: 16ch; }
+.kicker { font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+.lede { max-width: 38rem; color: rgba(255,255,255,.86); font-size: 1.08rem; }
+.actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.6rem; }
+.band { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--white); border-bottom: 1px solid var(--line); }
+.band p { margin: 0; padding: 1rem .8rem; text-align: center; font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; border-right: 1px solid var(--line); }
+.band p:last-child { border-right: 0; }
+.section { padding: 4.2rem 0; }
+h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); margin: .35rem 0 0.8rem; }
+.muted { color: var(--muted); }
+.grid3, .grid2, .grid4 { display: grid; gap: 1rem; }
+.grid3 { grid-template-columns: repeat(3, 1fr); }
+.grid2 { grid-template-columns: repeat(2, 1fr); }
+.grid4 { grid-template-columns: repeat(4, 1fr); }
+.card, .panel {
+  background: var(--white); border: 1px solid var(--line); border-radius: 1rem; padding: 1.25rem 1.3rem;
+}
+.card h3, .panel h3 { margin: .2rem 0 .45rem; font-size: 1.35rem; }
+.navy { background: var(--ink); color: var(--white); }
+.navy .muted { color: rgba(255,255,255,.78); }
+footer { padding: 2.4rem 0 2.8rem; border-top: 1px solid var(--line); font-size: .88rem; color: var(--muted); }
+.foot { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+form { display: grid; gap: .7rem; }
+label { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+input, select, textarea {
+  width: 100%; border: 1px solid var(--line); border-radius: .7rem; padding: .75rem .8rem;
+  font: inherit; color: var(--ink); background: var(--white);
+}
+textarea { min-height: 7rem; }
+.compare { width: 100%; border-collapse: collapse; background: var(--white); }
+.compare th, .compare td { border: 1px solid var(--line); padding: .7rem .8rem; text-align: left; font-size: .92rem; }
+.compare th { background: var(--ink); color: #fff; }
+.faq details { background: var(--white); border: 1px solid var(--line); border-radius: .8rem; padding: .85rem 1rem; }
+.faq details + details { margin-top: .55rem; }
+.faq summary { cursor: pointer; font-weight: 650; }
+@media (max-width: 860px) {
+  .band, .grid3, .grid2, .grid4 { grid-template-columns: 1fr; }
+  .hero { padding: 3rem 0; }
+}

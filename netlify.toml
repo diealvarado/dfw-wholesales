@@ -11,3 +11,23 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+[[redirects]]
+  from = "https://alvacomhomes.netlify.app/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "https://alvacomhomes.netlify.app/favicon.svg"
+  to = "/favicon.svg"
+  status = 200
+
+[[redirects]]
+  from = "https://alvacomhomes.netlify.app/favicon.png"
+  to = "/favicon.png"
+  status = 200
+
+[[redirects]]
+  from = "https://alvacomhomes.netlify.app/*"
+  to = "/site/:splat"
+  status = 200
