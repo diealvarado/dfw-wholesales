@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alvacom Homes · Off-Market</title>
-  <!-- alvacom-site-v3-20260928a -->
+  <!-- alvacom-site-v3-20260928b -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
   <link rel="apple-touch-icon" href="/favicon.png" />
@@ -479,6 +479,20 @@
       if (!s) return false;
       if (/^partial\s*:/i.test(s)) return true;
       return !/^\d/.test(s);
+    }
+    /** Parsed partial: 'Partial: <Street>', 'Partial: 12XX <Street>', 'Partial: N Block <Street>', 'Partial: Area: <City> 3/2' */
+    function partialInfo(addr) {
+      const raw = String(addr || '').replace(/^partial\s*:\s*/i, '').trim();
+      const area = /^area\s*:/i.test(raw);
+      const street = area ? '' : raw.replace(/^\d+x+\s+/i, '').replace(/^\d+\s+block\s+(of\s+)?/i, '').trim();
+      return { area, street, label: area ? raw.replace(/^area\s*:\s*/i, 'Area: ') : raw };
+    }
+    /** Maps search query that never pins a partial to a fake house number. */
+    function mapsQuery(p) {
+      const cityLine = [p.city, p.state, p.zip].filter(Boolean).join(', ');
+      if (!p.partialAddress) return fullLine(p);
+      const info = partialInfo(p.address);
+      return [info.street, cityLine].filter(Boolean).join(', ') || cityLine;
     }
     function isPartialDeal(d) {
       if (!d) return false;
@@ -1338,8 +1352,8 @@
       if (!blurb && !(authRole === 'admin' && p.description)) {
         blurb = 'Off-market opportunity sourced from wholesaler inventory.';
       }
-      const maps = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(fullLine(p));
-      const street = (p.lat && p.lon) ? ('https://www.google.com/maps?layer=c&cbll=' + p.lat + ',' + p.lon + '&cbp=12,0,0,0,0') : '';
+      const maps = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapsQuery(p));
+      const street = (!p.partialAddress && p.lat && p.lon) ? ('https://www.google.com/maps?layer=c&cbll=' + p.lat + ',' + p.lon + '&cbp=12,0,0,0,0') : '';
       const availColor = p.available !== false ? 'text-emerald-300' : 'text-slate-300';
 
       const wholesalerSection = p.sender
@@ -1361,7 +1375,8 @@
         : '';
 
       const partialBadge = p.partialAddress
-        ? '<span class="inline-block mt-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-200 text-amber-900">Partial address</span>'
+        ? ('<span class="inline-block mt-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-200 text-amber-900">Partial address</span>' +
+           '<div class="mt-1 text-[11px] text-white/70">' + (partialInfo(p.address).area ? 'Area-only listing — exact address shared on request.' : 'Exact house number withheld by the seller.') + '</div>')
         : '';
 
       document.getElementById('sheetBody').innerHTML =
@@ -1471,7 +1486,7 @@
       syncListPad();
     }
 
-    window.__alvacom = { syncListPad, getPad: () => getComputedStyle(document.documentElement).getPropertyValue('--app-header-h') };
+    window.__alvacom = { pinnedPartials: () => Object.keys(markerById).filter(id => byId[id] && byId[id].partialAddress).length, pinCount: () => Object.keys(markerById).length, syncListPad, getPad: () => getComputedStyle(document.documentElement).getPropertyValue('--app-header-h') };
     window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
