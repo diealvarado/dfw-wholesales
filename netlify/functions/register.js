@@ -28,6 +28,41 @@ function validPhone(s) {
   return digits.length >= 10 && digits.length <= 15;
 }
 
+async function notifyAdmins(record) {
+  const url = process.env.APPROVAL_MAILER_URL || '';
+  const secret = process.env.APPROVAL_SECRET || '';
+  if (!url || !secret) return { ok: false, error: 'mailer not configured' };
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'notify',
+        secret,
+        name: record.name,
+        email: record.email,
+        phone: record.phone,
+        createdAt: record.createdAt,
+      }),
+      redirect: 'follow',
+      signal: ctrl.signal,
+    });
+    const text = await resp.text();
+    try {
+      const data = JSON.parse(text);
+      return data && data.ok ? { ok: true } : { ok: false, error: (data && data.error) || 'mailer error' };
+    } catch (_) {
+      return { ok: false, error: 'mailer HTTP ' + resp.status + ' (not authorized?)' };
+    }
+  } catch (err) {
+    return { ok: false, error: 'mailer unreachable: ' + (err && err.message) };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: { 'Cache-Control': 'no-store' }, body: '' };
@@ -64,6 +99,17 @@ exports.handler = async (event) => {
   try {
     const store = getRegistrationsStore(event);
     await store.setJSON(id, record);
+
+    // Notify admins directly via the Apps Script mailer. Netlify form email
+    // notifications are skipped when Netlify flags a submission as spam, so we
+    // don't rely on them. Never blocks or fails the registration.
+    const notify = await notifyAdmins(record);
+    try {
+      record.notified = notify.ok;
+      if (!notify.ok) record.notifyError = notify.error;
+      await store.setJSON(id, record);
+    } catch (_) {}
+
     return json(200, { ok: true, id });
   } catch (err) {
     console.error('register', err && err.message);
