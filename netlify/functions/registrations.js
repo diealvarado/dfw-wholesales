@@ -28,6 +28,30 @@ function getRegistrationsStore(event) {
   return getStore('registrations');
 }
 
+async function mailerHealth() {
+  const url = process.env.APPROVAL_MAILER_URL || '';
+  if (!url) return { ok: false, error: 'APPROVAL_MAILER_URL not set' };
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const resp = await fetch(url, { redirect: 'follow', signal: ctrl.signal });
+    const text = await resp.text();
+    try {
+      const data = JSON.parse(text);
+      return { ok: !!data.ok, service: data.service, version: data.version || null };
+    } catch (_) {
+      return {
+        ok: false,
+        error: 'Google returned HTTP ' + resp.status + ' (web app not authorized / not public yet)',
+      };
+    }
+  } catch (err) {
+    return { ok: false, error: 'mailer unreachable: ' + (err && err.message) };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 function requireAdmin(event) {
   const cookies = parseCookies(event.headers.cookie || event.headers.Cookie || '');
   return cookies.alvacom_auth === 'admin';
@@ -55,7 +79,8 @@ exports.handler = async (event) => {
         } catch (_) {}
       }
       registrations.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-      return json(200, { registrations });
+      const mailer = await mailerHealth();
+      return json(200, { registrations, mailer });
     } catch (err) {
       return json(500, { error: 'load failed', detail: String(err && err.message || err) });
     }
