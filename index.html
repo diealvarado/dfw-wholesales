@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alvacom Homes · Off-Market</title>
-  <!-- alvacom-site-v2-20260924f -->
+  <!-- alvacom-site-v3-20260928a -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
   <link rel="apple-touch-icon" href="/favicon.png" />
@@ -268,6 +268,8 @@
     let authRole = null;
     let showAll = false;
     let listMode = false;
+    let lastBounds = [];
+    let defaultViewApplied = false;
     let searchQuery = '';
     let sortOrder = 'newest';
     let mapReady = false;
@@ -469,10 +471,19 @@
       }
     }
 
+    /** Shared partial logic: parser marks masked addresses with a 'Partial:' prefix
+     *  (New Western, Investorlift, Momentum, …). Server sends deal.partial; we also
+     *  fall back to the prefix / missing house number. Never keyed off sender. */
     function isPartialAddress(addr) {
       const s = String(addr || '').trim();
       if (!s) return false;
+      if (/^partial\s*:/i.test(s)) return true;
       return !/^\d/.test(s);
+    }
+    function isPartialDeal(d) {
+      if (!d) return false;
+      if (d.partial === true || d.partialAddress === true) return true;
+      return isPartialAddress(d.address);
     }
 
     function normText(s) {
@@ -674,6 +685,11 @@
       document.getElementById('btnLogout').classList.remove('hidden');
       showAppChrome();
       ensureMap();
+      // List view first for every role (desktop + mobile); map via toggle
+      if (!defaultViewApplied) {
+        defaultViewApplied = true;
+        setViewMode(true);
+      }
     }
 
     async function loadDeals() {
@@ -799,6 +815,7 @@
         markerById = {};
         if (markerLayer) markerLayer.clearLayers();
         renderList([]);
+        defaultViewApplied = false;
         showLogin();
         setStatus('Signed out.');
       };
@@ -983,19 +1000,30 @@
         }
         const data = await resp.json();
         const list = Array.isArray(data.registrations) ? data.registrations : [];
+        const mh = data.mailer || {};
+        const banner = mh.ok
+          ? ''
+          : ('<div class="mb-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900">' +
+              '<div class="font-semibold mb-1">Approval mailer is not working</div>' +
+              '<div>' + esc(mh.error || 'Unknown error') + '</div>' +
+              '<div class="mt-1">Fix: open the Apps Script editor as rentlmgt@gmail.com, run <b>doGet</b>, click <b>Allow</b>. Until then use “Mark approved (email manually)”.</div>' +
+            '</div>');
         if (!list.length) {
-          body.innerHTML = '<div class="text-center py-8 text-slate-400">No registrations yet.</div>';
+          body.innerHTML = banner + '<div class="text-center py-8 text-slate-400">No registrations yet.</div>';
           return;
         }
-        body.innerHTML = list.map(r => {
+        body.innerHTML = banner + list.map(r => {
           const status = String(r.status || 'pending');
           const statusCls = status === 'approved'
             ? 'bg-emerald-100 text-emerald-800'
             : 'bg-amber-100 text-amber-800';
           const when = r.createdAt ? new Date(r.createdAt).toLocaleString() : '';
           const approveBtn = status === 'pending'
-            ? ('<button type="button" data-id="' + esc(r.id) + '" class="js-approve text-xs font-semibold px-3 py-1.5 rounded-lg bg-ink-700 text-white hover:bg-ink-600">Approve &amp; email</button>')
-            : '<span class="text-[11px] text-slate-400">Approved</span>';
+            ? ('<div class="flex flex-col items-end gap-1">' +
+                '<button type="button" data-id="' + esc(r.id) + '" class="js-approve text-xs font-semibold px-3 py-1.5 rounded-lg bg-ink-700 text-white hover:bg-ink-600">Approve &amp; email</button>' +
+                '<button type="button" data-id="' + esc(r.id) + '" class="js-approve-manual text-[11px] font-semibold text-ink-600 hover:underline">Mark approved (email manually)</button>' +
+              '</div>')
+            : ('<span class="text-[11px] text-slate-400">Approved' + (r.emailed === false ? ' · not emailed' : (r.emailed ? ' · emailed' : '')) + '</span>');
           return (
             '<div class="border border-slate-200 rounded-xl p-4 mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">' +
               '<div class="min-w-0">' +
@@ -1012,6 +1040,9 @@
         body.querySelectorAll('.js-approve').forEach(btn => {
           btn.addEventListener('click', () => approveRegistration(btn.getAttribute('data-id'), btn));
         });
+        body.querySelectorAll('.js-approve-manual').forEach(btn => {
+          btn.addEventListener('click', () => approveRegistration(btn.getAttribute('data-id'), btn, true));
+        });
       } catch (err) {
         body.innerHTML = '<div class="text-red-600 py-6 text-center">Load failed.</div>';
       }
@@ -1021,20 +1052,25 @@
       document.getElementById('regsModal').classList.add('hidden');
     }
 
-    async function approveRegistration(id, btn) {
+    async function approveRegistration(id, btn, manual) {
       if (!id) return;
-      if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+      const label = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = manual ? 'Saving…' : 'Sending…'; }
       try {
         const resp = await fetch('/api/registrations/approve', {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id })
+          body: JSON.stringify({ id, manual: !!manual })
         });
         const data = await resp.json().catch(() => ({}));
+        if (resp.ok && manual && data.mailto) {
+          window.open(data.mailto, '_blank');
+        }
         if (!resp.ok) {
-          alert((data && data.error) || ('Approve failed (' + resp.status + ')'));
-          if (btn) { btn.disabled = false; btn.textContent = 'Approve & email'; }
+          alert(((data && data.error) || ('Approve failed (' + resp.status + ')')) + (data && data.detail ? '\n' + data.detail : ''));
+          if (btn) { btn.disabled = false; btn.textContent = label; }
+          openRegsModal();
           return;
         }
         openRegsModal();
@@ -1060,8 +1096,9 @@
       processRows({ reuseGeo: true });
     }
 
-    function toggleView() {
-      listMode = !listMode;
+    function toggleView() { setViewMode(!listMode); }
+    function setViewMode(toList) {
+      listMode = !!toList;
       const btn = document.getElementById('btnView');
       const list = document.getElementById('list');
       const mapEl = document.getElementById('map');
@@ -1079,7 +1116,11 @@
         btn.textContent = 'List view';
         list.classList.add('hidden');
         mapEl.classList.remove('hidden');
-        setTimeout(() => { if (map) map.invalidateSize(); }, 40);
+        setTimeout(() => {
+          if (!map) return;
+          map.invalidateSize();
+          if (lastBounds && lastBounds.length) map.fitBounds(lastBounds, { padding: [48, 48] });
+        }, 60);
       }
     }
 
@@ -1132,7 +1173,7 @@
           description: d.description || '',
           photosUrl: d.photosUrl || '',
           imageUrl: d.imageUrl || '',
-          partialAddress: isPartialAddress(address),
+          partialAddress: isPartialDeal(d),
           senderKey: friendlySender(d.sender || '').key
         };
         if (!p.id) p.id = makeId(p);
@@ -1224,6 +1265,7 @@
     }
 
     function addMarkerFor(p) {
+      if (p.partialAddress) return null;
       if (p.lat == null || p.lon == null) return null;
       const icon = L.divIcon({
         className: '',
@@ -1248,6 +1290,7 @@
         if (my !== runId) return;
         setStatus('<span class="spin"></span>Mapping ' + (i + 1) + ' / ' + props.length + '…');
         const p = props[i];
+        if (p.partialAddress) continue; // partials: list only, never on map
         if (p.lat == null || p.lon == null) {
           const geo = await geocode(p);
           if (!geo) { await sleep(150); continue; }
@@ -1259,7 +1302,8 @@
         bounds.push([p.lat, p.lon]);
       }
       if (my !== runId) return;
-      if (bounds.length) map.fitBounds(bounds, { padding: [48, 48] });
+      lastBounds = bounds;
+      if (bounds.length && !listMode) map.fitBounds(bounds, { padding: [48, 48] });
     }
 
     function rebuildMarkersFromCache(props) {
@@ -1268,6 +1312,7 @@
       markerById = {};
       const bounds = [];
       props.forEach(p => {
+        if (p.partialAddress) return;
         if (p.lat == null || p.lon == null) return;
         addMarkerFor(p);
         bounds.push([p.lat, p.lon]);
