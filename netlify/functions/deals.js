@@ -116,6 +116,14 @@ function findKey(keys, aliases) {
   return undefined;
 }
 
+/** Masked / partial address: 'Partial:' prefix or no leading house number. */
+function isPartialAddress(addr) {
+  const a = String(addr || '').trim();
+  if (!a) return false;
+  if (/^partial\s*:/i.test(a)) return true;
+  return !/^\d/.test(a);
+}
+
 /** Stable deal id — must match frontend makeId. */
 function makeId(deal) {
   const base = deal.emailId || (deal.address + '|' + deal.emailDate + '|' + deal.price);
@@ -209,6 +217,7 @@ exports.handler = async (event) => {
     comments: findKey(keys, ['comments', 'comment']),
     subject: findKey(keys, ['emailsubject', 'subject']),
     emailId: findKey(keys, ['emailid', 'messageid', 'id']),
+    partialFlag: findKey(keys, ['partial', 'ispartial', 'partialaddress', 'addresspartial']),
     description: findKey(keys, ['description']),
     photosUrl: findKey(keys, ['photoslink', 'photosurl', 'photos']),
     imageUrl: findKey(keys, ['imageurl', 'image', 'imgurl', 'thumbnail']),
@@ -262,6 +271,10 @@ exports.handler = async (event) => {
     };
 
     deal.id = makeId(deal);
+    // Shared partial logic (parser writes a 'Partial:' address prefix for masked
+    // listings: New Western, Investorlift, Momentum, ...). Not keyed off sender.
+    deal.partial = isPartialAddress(address) ||
+      (k.partialFlag ? /^(true|yes|y|1|partial)$/i.test(clean(row[k.partialFlag])) : false);
     if (Object.prototype.hasOwnProperty.call(overrides, deal.id)) {
       deal.available = !!overrides[deal.id];
     } else {
