@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alvacom Homes · Off-Market</title>
-  <!-- alvacom-site-v3-20260928b -->
+  <!-- alvacom-site-v3-20260930a -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
   <link rel="apple-touch-icon" href="/favicon.png" />
@@ -526,7 +526,21 @@
       }
       return (comments || subject || '').slice(0, 180);
     }
+    /** Admin-only display label for a deal's wholesaler (friendly name preferred). */
+    function senderLabel(p) {
+      if (authRole !== 'admin' || !p || !p.sender) return '';
+      const f = friendlySender(p.sender);
+      return f.label || String(p.sender);
+    }
+    function senderBadgeHtml(p) {
+      const label = senderLabel(p);
+      if (!label) return '';
+      return '<div class="mb-2 inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg bg-ink-50 text-ink-700 border border-ink-100" title="' + esc(p.sender) + '">' +
+        '<span class="uppercase tracking-wider text-[9px] text-slate-400 font-bold">Wholesaler</span>' +
+        '<span>' + esc(label) + '</span></div>';
+    }
     function adminDetailsHtml(p, opts) {
+
 
       opts = opts || {};
       if (authRole !== 'admin') return '';
@@ -1252,8 +1266,8 @@
 
     function buildPopup(p) {
       const facts = [p.beds && (p.beds + ' bd'), p.baths && (p.baths + ' ba'), p.sqft && (p.sqft + ' sf')].filter(Boolean).join(' · ');
-      const wholesalerLine = p.sender
-        ? '<div class="text-xs text-slate-500 mb-1">Wholesaler: ' + esc(p.sender) + '</div>'
+      const wholesalerLine = (authRole === 'admin' && p.sender)
+        ? '<div class="text-xs text-ink-700 mb-1"><span class="font-semibold uppercase tracking-wider text-[10px] text-slate-400">Wholesaler</span> ' + esc(senderLabel(p)) + '</div>'
         : '';
       const unavailNote = p.available === false
         ? '<div class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Unavailable</div>'
@@ -1356,11 +1370,14 @@
       const street = (!p.partialAddress && p.lat && p.lon) ? ('https://www.google.com/maps?layer=c&cbll=' + p.lat + ',' + p.lon + '&cbp=12,0,0,0,0') : '';
       const availColor = p.available !== false ? 'text-emerald-300' : 'text-slate-300';
 
-      const wholesalerSection = p.sender
+      const wholesalerSection = (authRole === 'admin' && p.sender)
         ? ('<section class="mb-5">' +
             '<div class="rounded-xl border border-slate-200 px-4 py-3 text-sm">' +
               '<span class="text-slate-400 text-xs uppercase tracking-wider">Wholesaler</span>' +
-              '<div class="font-medium text-ink-700 mt-0.5">' + esc(p.sender) + '</div>' +
+              '<div class="font-medium text-ink-700 mt-0.5">' + esc(senderLabel(p)) + '</div>' +
+              (senderLabel(p) !== String(p.sender)
+                ? '<div class="text-[11px] text-slate-400 mt-0.5 break-all">' + esc(p.sender) + '</div>'
+                : '') +
             '</div>' +
           '</section>')
         : '';
@@ -1466,7 +1483,8 @@
                 '<span class="shrink-0 text-sm font-bold text-gold-600 bg-amber-50 px-2.5 py-1 rounded-lg">' + esc(money(p.price)) + '</span>' +
               '</div>' +
               badges +
-              '<p class="text-sm text-slate-500 mb-3">' + esc([p.city, p.state, p.zip].filter(Boolean).join(', ')) + '</p>' +
+              '<p class="text-sm text-slate-500 mb-2">' + esc([p.city, p.state, p.zip].filter(Boolean).join(', ')) + '</p>' +
+              senderBadgeHtml(p) +
               (facts ? '<p class="text-xs font-medium text-ink-600 mb-1">' + esc(facts) + '</p>' : '') +
               '<div class="mb-3">' + availBadgeHtml(p, { interactive: true }) + '</div>' +
               (blurb ? '<p class="text-xs text-slate-500 line-clamp-3 mb-2">' + esc(blurb) + '</p>' : '') +
