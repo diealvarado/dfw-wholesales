@@ -209,6 +209,16 @@
   </div>
 
   <script>
+    // When served under https://alvacomhomes.com/offmarket, prefix API calls.
+    const BASE = (function () {
+      const path = location.pathname || '';
+      if (path === '/offmarket' || path.startsWith('/offmarket/')) return '/offmarket';
+      return '';
+    })();
+    function apiUrl(path) {
+      return BASE + path;
+    }
+
     const ALLOWED_CITIES = [
       'Plano',
       'Frisco',
@@ -723,7 +733,7 @@
     async function loadDeals() {
       setStatus('<span class="spin"></span>Loading listings…');
       try {
-        const resp = await fetch('/api/deals', { credentials: 'same-origin' });
+        const resp = await fetch(apiUrl('/api/deals'), { credentials: 'same-origin' });
         if (resp.status === 401) {
           showLogin();
           setStatus('Sign in to view listings.');
@@ -749,7 +759,7 @@
     }
 
     async function setAvailability(id, available) {
-      const resp = await fetch('/api/availability', {
+      const resp = await fetch(apiUrl('/api/availability'), {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
@@ -835,7 +845,7 @@
       document.getElementById('backdrop').onclick = closeSheet;
       document.getElementById('btnPrint').onclick = () => window.print();
       document.getElementById('btnLogout').onclick = async () => {
-        try { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); } catch (_) {}
+        try { await fetch(apiUrl('/api/logout'), { method: 'POST', credentials: 'same-origin' }); } catch (_) {}
         authRole = null;
         allDeals = [];
         byId = {};
@@ -874,7 +884,7 @@
         btn.textContent = 'Signing in…';
         err.classList.add('hidden');
         try {
-          const resp = await fetch('/api/login', {
+          const resp = await fetch(apiUrl('/api/login'), {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
