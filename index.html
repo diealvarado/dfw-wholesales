@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alvacom Homes · Off-Market</title>
-  <!-- alvacom-site-v3-20260930a -->
+  <!-- alvacom-site-v3-20261003a -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
   <link rel="apple-touch-icon" href="/favicon.png" />
@@ -954,12 +954,14 @@
             'form-name': 'registration',
             name, email, phone
           });
-          const netlifyPromise = fetch('/', {
+          // Under /offmarket the page origin is alvacomhomes.com, so '/' and
+          // '/api/*' must be prefixed or they hit the marketing site (404).
+          const netlifyPromise = fetch((BASE || '') + '/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: body.toString()
           }).catch(() => null);
-          const apiPromise = fetch('/api/register', {
+          const apiPromise = fetch(apiUrl('/api/register'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, email, phone })
@@ -1031,7 +1033,7 @@
       const body = document.getElementById('regsBody');
       body.innerHTML = '<div class="text-center py-8 text-slate-400"><span class="spin"></span>Loading…</div>';
       try {
-        const resp = await fetch('/api/registrations', { credentials: 'same-origin' });
+        const resp = await fetch(apiUrl('/api/registrations'), { credentials: 'same-origin' });
         if (!resp.ok) {
           body.innerHTML = '<div class="text-red-600 py-6 text-center">Could not load registrations (' + resp.status + ').</div>';
           return;
@@ -1095,7 +1097,7 @@
       const label = btn ? btn.textContent : '';
       if (btn) { btn.disabled = true; btn.textContent = manual ? 'Saving…' : 'Sending…'; }
       try {
-        const resp = await fetch('/api/registrations/approve', {
+        const resp = await fetch(apiUrl('/api/registrations/approve'), {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
