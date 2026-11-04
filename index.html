@@ -73,6 +73,9 @@
       </div>
       <form id="loginForm" class="rounded-2xl bg-white shadow-2xl border border-slate-200 p-6">
         <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Private access</div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="loginEmail">Email</label>
+        <input id="loginEmail" name="email" type="email" autocomplete="username"
+          class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600 mb-3" />
         <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="password">Password</label>
         <input id="password" name="password" type="password" autocomplete="current-password" required
           class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600" />
@@ -93,12 +96,30 @@
         <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="regPhone">Phone</label>
         <input id="regPhone" name="phone" type="tel" required autocomplete="tel"
           class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600" />
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5 mt-3" for="regPassword">Create a password</label>
+        <input id="regPassword" name="password" type="password" required minlength="8" autocomplete="new-password"
+          class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600 mb-3" />
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="regPassword2">Confirm password</label>
+        <input id="regPassword2" type="password" required minlength="8" autocomplete="new-password"
+          class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600" />
+        <p class="mt-1 text-[11px] text-slate-400">At least 8 characters. You'll sign in with your email and this password once approved.</p>
         <p id="registerError" class="hidden mt-2 text-xs text-red-600"></p>
         <p id="registerOk" class="hidden mt-2 text-xs text-emerald-700"></p>
         <button type="submit" id="registerBtn"
           class="mt-4 w-full text-sm font-semibold px-4 py-2.5 rounded-xl bg-ink-700 text-white hover:bg-ink-600 transition">Submit request</button>
         <button type="button" id="btnShowLogin"
           class="mt-3 w-full text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-200 text-ink-700 hover:bg-slate-50 transition">Back to sign in</button>
+      </form>
+      <form id="setupForm" class="hidden rounded-2xl bg-white shadow-2xl border border-slate-200 p-6">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Set your password</div>
+        <div id="setupWho" class="text-sm text-ink-700 mb-3"></div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="setupPw">New password</label>
+        <input id="setupPw" type="password" minlength="8" required autocomplete="new-password" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600 mb-3" />
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5" for="setupPw2">Confirm password</label>
+        <input id="setupPw2" type="password" minlength="8" required autocomplete="new-password" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-600/30 focus:border-ink-600" />
+        <p id="setupError" class="hidden mt-2 text-xs text-red-600"></p>
+        <button type="submit" id="setupBtn" class="mt-4 w-full text-sm font-semibold px-4 py-2.5 rounded-xl bg-ink-700 text-white hover:bg-ink-600 transition">Save password</button>
+        <button type="button" id="btnSetupToLogin" class="mt-3 w-full text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-200 text-ink-700 hover:bg-slate-50 transition">Back to sign in</button>
       </form>
     </div>
   </div>
@@ -131,6 +152,7 @@
         </div>
         <button id="btnMyCities" type="button" class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">My cities</button>
         <button id="btnView" type="button" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">List view</button>
+        <button id="btnStats" type="button" class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">Stats</button>
         <button id="btnRegistrations" type="button" class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-ink-700 hover:bg-slate-50 transition">Registrations</button>
         <button id="btnLogout" type="button" class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition">Sign out</button>
       </div>
@@ -186,6 +208,22 @@
       <div id="regsBody" class="px-5 py-4 max-h-[60vh] overflow-y-auto text-sm text-slate-600">
         <div class="text-center py-8 text-slate-400">Loading…</div>
       </div>
+    </div>
+  </div>
+
+  <div id="statsModal" class="hidden fixed inset-0 z-[2100] flex items-end sm:items-center justify-center bg-ink-900/50 px-4 py-6">
+    <div class="w-full max-w-5xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden" role="dialog" aria-modal="true">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+        <div>
+          <div class="font-display text-lg font-semibold text-ink-700">Visitor stats</div>
+          <div class="text-xs text-slate-500">Last 30 days · Central Time · admin only</div>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" id="btnStatsRefresh" class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">Refresh</button>
+          <button type="button" id="btnStatsClose" class="text-xs font-semibold px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200">Close</button>
+        </div>
+      </div>
+      <div id="statsBody" class="px-5 py-4 max-h-[75vh] overflow-y-auto text-sm text-slate-600"></div>
     </div>
   </div>
 
@@ -457,6 +495,8 @@
       const btnMy = document.getElementById('btnMyCities');
       const badge = document.getElementById('badge');
       const btnRegs = document.getElementById('btnRegistrations');
+      const btnStatsEl = document.getElementById('btnStats');
+      if (btnStatsEl) btnStatsEl.classList.toggle('hidden', authRole !== 'admin');
       const senderWrap = document.getElementById('senderFilterWrap');
       if (authRole === 'admin') {
         btnFilter.classList.remove('hidden');
@@ -701,7 +741,8 @@
       const overlay = document.getElementById('loginOverlay');
       overlay.classList.remove('hidden');
       hideAppChrome();
-      document.getElementById('loginForm').classList.remove('hidden');
+      const inSetup = !!new URLSearchParams(location.search).get('setup');
+      document.getElementById('loginForm').classList.toggle('hidden', inSetup);
       document.getElementById('registerForm').classList.add('hidden');
       const err = document.getElementById('loginError');
       if (msg) {
@@ -714,7 +755,10 @@
       document.getElementById('btnLogout').classList.add('hidden');
       const btnRegs = document.getElementById('btnRegistrations');
       if (btnRegs) btnRegs.classList.add('hidden');
-      setTimeout(() => document.getElementById('password').focus(), 50);
+      const btnStatsEl = document.getElementById('btnStats');
+      if (btnStatsEl) btnStatsEl.classList.add('hidden');
+      document.getElementById('setupForm').classList.toggle('hidden', !inSetup);
+      if (!inSetup) setTimeout(() => document.getElementById('loginEmail').focus(), 50);
     }
 
     function hideLogin() {
@@ -872,6 +916,7 @@
         searchTimer = setTimeout(() => {
           searchQuery = String(e.target.value || '').toLowerCase().trim();
           processRows({ reuseGeo: true });
+          scheduleSearchTrack(searchQuery);
         }, 180);
       });
 
@@ -879,6 +924,7 @@
         e.preventDefault();
         const btn = document.getElementById('loginBtn');
         const pw = document.getElementById('password').value;
+        const loginEmail = String(document.getElementById('loginEmail').value || '').trim();
         const err = document.getElementById('loginError');
         btn.disabled = true;
         btn.textContent = 'Signing in…';
@@ -888,10 +934,12 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: pw })
+            body: JSON.stringify({ email: loginEmail, password: pw })
           });
           if (!resp.ok) {
-            err.textContent = 'Incorrect password.';
+            let msg = 'Incorrect email or password.';
+            try { const j = await resp.json(); if (j && j.error) msg = j.error; } catch (_) {}
+            err.textContent = msg;
             err.classList.remove('hidden');
             btn.disabled = false;
             btn.textContent = 'Sign in';
@@ -929,6 +977,8 @@
         const name = String(document.getElementById('regName').value || '').trim();
         const email = String(document.getElementById('regEmail').value || '').trim();
         const phone = String(document.getElementById('regPhone').value || '').trim();
+        const regPw = document.getElementById('regPassword').value || '';
+        const regPw2 = document.getElementById('regPassword2').value || '';
         err.classList.add('hidden');
         ok.classList.add('hidden');
         if (!name || name.length < 2) {
@@ -944,6 +994,16 @@
         const digits = phone.replace(/\D/g, '');
         if (digits.length < 10 || digits.length > 15) {
           err.textContent = 'Please enter a valid phone number.';
+          err.classList.remove('hidden');
+          return;
+        }
+        if (regPw.length < 8) {
+          err.textContent = 'Password must be at least 8 characters.';
+          err.classList.remove('hidden');
+          return;
+        }
+        if (regPw !== regPw2) {
+          err.textContent = 'Passwords do not match.';
           err.classList.remove('hidden');
           return;
         }
@@ -964,7 +1024,7 @@
           const apiPromise = fetch(apiUrl('/api/register'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, phone })
+            body: JSON.stringify({ name, email, phone, password: regPw })
           });
           const [apiResp] = await Promise.all([apiPromise, netlifyPromise]);
           if (!apiResp.ok) {
@@ -981,6 +1041,8 @@
           document.getElementById('regName').value = '';
           document.getElementById('regEmail').value = '';
           document.getElementById('regPhone').value = '';
+          document.getElementById('regPassword').value = '';
+          document.getElementById('regPassword2').value = '';
           btn.disabled = false;
           btn.textContent = 'Submit request';
         } catch (ex) {
@@ -992,6 +1054,13 @@
       });
 
       document.getElementById('btnRegistrations').onclick = openRegsModal;
+      document.getElementById('btnStats').onclick = openStatsModal;
+      document.getElementById('btnStatsRefresh').onclick = openStatsModal;
+      document.getElementById('btnStatsClose').onclick = () => document.getElementById('statsModal').classList.add('hidden');
+      document.getElementById('statsModal').addEventListener('click', (e) => {
+        if (e.target.id === 'statsModal') e.target.classList.add('hidden');
+      });
+      initSetupForm();
       document.getElementById('btnRegsClose').onclick = closeRegsModal;
       document.getElementById('regsModal').addEventListener('click', (e) => {
         if (e.target.id === 'regsModal') closeRegsModal();
@@ -1028,6 +1097,128 @@
       loadDeals();
     }
 
+    // ---- visitor tracking (fire-and-forget) ----
+    const trackedViews = {};
+    function trackEvent(payload) {
+      try {
+        if (payload.type === 'deal_view') {
+          const now = Date.now();
+          if (trackedViews[payload.dealId] && now - trackedViews[payload.dealId] < 10 * 60 * 1000) return;
+          trackedViews[payload.dealId] = now;
+        }
+        fetch(apiUrl('/api/track'), {
+          method: 'POST', credentials: 'same-origin', keepalive: true,
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        }).catch(() => {});
+      } catch (_) {}
+    }
+    let searchTrackTimer = null;
+    function scheduleSearchTrack(q) {
+      clearTimeout(searchTrackTimer);
+      if (!q || q.length < 3) return;
+      searchTrackTimer = setTimeout(() => trackEvent({ type: 'search', query: q }), 2500);
+    }
+
+    // ---- one-time password setup link (?setup=TOKEN) ----
+    function initSetupForm() {
+      const params = new URLSearchParams(location.search);
+      const token = params.get('setup');
+      if (!token) return;
+      const form = document.getElementById('setupForm');
+      const err = document.getElementById('setupError');
+      const showErr = (m) => { err.textContent = m; err.classList.remove('hidden'); };
+      setTimeout(() => {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.add('hidden');
+        form.classList.remove('hidden');
+      }, 0);
+      fetch(apiUrl('/api/password-setup'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, check: true }) })
+        .then(r => r.json().then(j => ({ ok: r.ok, j })))
+        .then(({ ok, j }) => {
+          if (!ok) { showErr(j.error || 'Invalid link'); document.getElementById('setupBtn').disabled = true; return; }
+          document.getElementById('setupWho').textContent = 'Account: ' + (j.email || '');
+        }).catch(() => showErr('Could not verify link.'));
+      const clearParam = () => { history.replaceState(null, '', location.pathname + location.hash); };
+      document.getElementById('btnSetupToLogin').onclick = () => { clearParam(); form.classList.add('hidden'); document.getElementById('loginForm').classList.remove('hidden'); };
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        err.classList.add('hidden');
+        const a = document.getElementById('setupPw').value || '';
+        const b = document.getElementById('setupPw2').value || '';
+        if (a.length < 8) return showErr('Password must be at least 8 characters.');
+        if (a !== b) return showErr('Passwords do not match.');
+        const btn = document.getElementById('setupBtn');
+        btn.disabled = true; btn.textContent = 'Saving…';
+        try {
+          const r = await fetch(apiUrl('/api/password-setup'), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password: a }) });
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) { showErr(j.error || 'Could not save password.'); btn.disabled = false; btn.textContent = 'Save password'; return; }
+          clearParam();
+          form.classList.add('hidden');
+          if (j.signedIn) { await loadDeals(); }
+          else { showLogin(j.message || 'Password saved.'); }
+        } catch (_) { showErr('Could not save password.'); btn.disabled = false; btn.textContent = 'Save password'; }
+      });
+    }
+
+    // ---- admin stats ----
+    function fmtCT(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' CT'; } catch (_) { return iso; }
+    }
+    async function openStatsModal() {
+      const modal = document.getElementById('statsModal');
+      const body = document.getElementById('statsBody');
+      modal.classList.remove('hidden');
+      body.innerHTML = '<div class="text-center py-8 text-slate-400"><span class="spin"></span>Loading…</div>';
+      let d;
+      try {
+        const r = await fetch(apiUrl('/api/stats'), { credentials: 'same-origin' });
+        if (!r.ok) { body.innerHTML = '<div class="text-red-600 py-6 text-center">Could not load stats (' + r.status + ').</div>'; return; }
+        d = await r.json();
+      } catch (_) { body.innerHTML = '<div class="text-red-600 py-6 text-center">Load failed.</div>'; return; }
+      const card = (label, val, sub) => '<div class="rounded-xl border border-slate-200 p-3"><div class="text-[11px] uppercase tracking-wide text-slate-400">' + label + '</div><div class="text-2xl font-semibold text-ink-700">' + esc(String(val)) + '</div>' + (sub ? '<div class="text-[11px] text-slate-400">' + sub + '</div>' : '') + '</div>';
+      const max = Math.max(1, ...d.daily.map(x => x.logins));
+      const bars = d.daily.map(x => {
+        const h = Math.round((x.logins / max) * 100);
+        return '<div class="flex-1 flex flex-col items-center justify-end h-full" title="' + esc(x.day + ': ' + x.logins + ' logins, ' + x.investors + ' investors, ' + x.views + ' deal views, ' + x.fails + ' failed') + '">' +
+          '<div class="w-full rounded-t bg-ink-600" style="height:' + h + '%;min-height:' + (x.logins ? 2 : 0) + 'px"></div></div>';
+      }).join('');
+      const th = (t) => '<th class="text-left font-semibold text-[11px] uppercase tracking-wide text-slate-400 py-1.5 pr-3">' + t + '</th>';
+      const td = (t) => '<td class="py-1.5 pr-3 align-top">' + t + '</td>';
+      const table = (heads, rows, empty) => rows.length
+        ? '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr>' + heads.map(th).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>'
+        : '<div class="text-xs text-slate-400 py-2">' + empty + '</div>';
+      const users = d.perUser.map(u => '<tr class="border-t border-slate-100">' +
+        td('<div class="font-medium text-ink-700">' + esc(u.name || u.email) + '</div>' + (u.name ? '<div class="text-slate-400">' + esc(u.email) + '</div>' : '')) +
+        td(esc(u.status) + (u.status === 'approved' && !u.hasPassword ? ' <span class="text-amber-700">· no password yet</span>' : '')) +
+        td(fmtCT(u.lastLogin || u.lastSeen)) + td(String(u.logins)) + td(String(u.views)) + td(String(u.dealsViewed)) + td(esc(u.lastCity || '')) + '</tr>');
+      const deals = d.topDeals.map(x => '<tr class="border-t border-slate-100">' + td(esc(x.address || x.dealId)) + td(esc(x.city || '')) + td(String(x.views)) + td(String(x.viewers)) + '</tr>');
+      const fails = d.failed.slice(0, 40).map(x => '<tr class="border-t border-slate-100">' + td(fmtCT(x.ts)) + td(esc(x.email || '(none)')) + td(esc(x.reason)) + td(esc([x.city, x.region, x.country].filter(Boolean).join(', '))) + td(esc(x.ua || '')) + '</tr>');
+      const searches = (d.topSearches || []).map(x => '<tr class="border-t border-slate-100">' + td(esc(x.query)) + td(String(x.count)) + '</tr>');
+      const u = d.users || {};
+      body.innerHTML =
+        '<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">' +
+          card('Logins (30d)', d.totals.logins) +
+          card('Active investors', d.activeInvestors7d + ' / ' + d.activeInvestors30d, '7 days / 30 days') +
+          card('Deal views (30d)', d.totals.views) +
+          card('Failed logins', d.totals.fails) +
+          card('Investor accounts', (u.approved || 0) + ' approved', (u.pending || 0) + ' pending · ' + (u.approvedNoPassword || 0) + ' need password') +
+        '</div>' +
+        (d.legacySharedPasswordUntil ? '<div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900">Shared investor password still works until ' + esc(d.legacySharedPasswordUntil) + ' (' + d.totals.legacyLogins + ' shared-password logins in 30 days). Send each approved investor a setup link from Registrations → Password link.</div>' : '') +
+        '<div class="font-semibold text-ink-700 mb-1">Daily logins</div>' +
+        '<div class="flex items-end gap-[3px] h-32 border-b border-slate-200 mb-1">' + bars + '</div>' +
+        '<div class="flex justify-between text-[10px] text-slate-400 mb-5"><span>' + esc(d.daily[0].day) + '</span><span>' + esc(d.today) + '</span></div>' +
+        '<div class="font-semibold text-ink-700 mb-1">Investors</div>' +
+        table(['Investor', 'Status', 'Last login', 'Logins (30d)', 'Deal views', 'Deals', 'Last location'], users, 'No investors yet.') +
+        '<div class="font-semibold text-ink-700 mt-5 mb-1">Most-viewed deals</div>' +
+        table(['Address', 'City', 'Views', 'Investors'], deals, 'No deal views yet.') +
+        '<div class="font-semibold text-ink-700 mt-5 mb-1">Top searches</div>' +
+        table(['Search', 'Count'], searches, 'No searches yet.') +
+        '<div class="font-semibold text-ink-700 mt-5 mb-1">Failed sign-in attempts</div>' +
+        table(['When', 'Email', 'Reason', 'Location', 'Device'], fails, 'None.');
+    }
+
     async function openRegsModal() {
       document.getElementById('regsModal').classList.remove('hidden');
       const body = document.getElementById('regsBody');
@@ -1056,14 +1247,24 @@
           const status = String(r.status || 'pending');
           const statusCls = status === 'approved'
             ? 'bg-emerald-100 text-emerald-800'
-            : 'bg-amber-100 text-amber-800';
+            : status === 'disabled' ? 'bg-slate-200 text-slate-600' : 'bg-amber-100 text-amber-800';
+          const acct = (r.hasPassword ? 'password set' : 'no password yet') +
+            (r.setupPending ? ' · setup link sent' : '') +
+            (r.lastLogin ? ' · last login ' + fmtCT(r.lastLogin) : '') +
+            (r.loginCount ? ' · ' + r.loginCount + ' logins' : '');
+          const userBtns = '<div class="flex gap-3 justify-end mt-1">' +
+            (status !== 'disabled'
+              ? '<button type="button" data-id="' + esc(r.id) + '" data-act="reset" class="js-uact text-[11px] font-semibold text-ink-600 hover:underline">Password link</button>' +
+                '<button type="button" data-id="' + esc(r.id) + '" data-act="disable" class="js-uact text-[11px] font-semibold text-red-600 hover:underline">Disable</button>'
+              : '<button type="button" data-id="' + esc(r.id) + '" data-act="enable" class="js-uact text-[11px] font-semibold text-emerald-700 hover:underline">Enable</button>') +
+            '</div>';
           const when = r.createdAt ? new Date(r.createdAt).toLocaleString() : '';
           const approveBtn = status === 'pending'
             ? ('<div class="flex flex-col items-end gap-1">' +
                 '<button type="button" data-id="' + esc(r.id) + '" class="js-approve text-xs font-semibold px-3 py-1.5 rounded-lg bg-ink-700 text-white hover:bg-ink-600">Approve &amp; email</button>' +
                 '<button type="button" data-id="' + esc(r.id) + '" class="js-approve-manual text-[11px] font-semibold text-ink-600 hover:underline">Mark approved (email manually)</button>' +
               '</div>')
-            : ('<span class="text-[11px] text-slate-400">Approved' + (r.emailed === false ? ' · not emailed' : (r.emailed ? ' · emailed' : '')) + '</span>');
+            : ('<span class="text-[11px] text-slate-400">' + (status === 'disabled' ? 'Disabled' : 'Approved' + (r.emailed === false ? ' · not emailed' : (r.emailed ? ' · emailed' : ''))) + '</span>');
           return (
             '<div class="border border-slate-200 rounded-xl p-4 mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">' +
               '<div class="min-w-0">' +
@@ -1072,13 +1273,17 @@
                 '</div>' +
                 '<div class="text-xs text-slate-500 mt-1">' + esc(r.email) + ' · ' + esc(r.phone) + '</div>' +
                 (when ? '<div class="text-[11px] text-slate-400 mt-0.5">' + esc(when) + '</div>' : '') +
+                '<div class="text-[11px] text-slate-400 mt-0.5">' + esc(acct) + '</div>' +
               '</div>' +
-              '<div class="shrink-0">' + approveBtn + '</div>' +
+              '<div class="shrink-0">' + approveBtn + userBtns + '</div>' +
             '</div>'
           );
         }).join('');
         body.querySelectorAll('.js-approve').forEach(btn => {
           btn.addEventListener('click', () => approveRegistration(btn.getAttribute('data-id'), btn));
+        });
+        body.querySelectorAll('.js-uact').forEach(btn => {
+          btn.addEventListener('click', () => userAction(btn.getAttribute('data-id'), btn.getAttribute('data-act')));
         });
         body.querySelectorAll('.js-approve-manual').forEach(btn => {
           btn.addEventListener('click', () => approveRegistration(btn.getAttribute('data-id'), btn, true));
@@ -1086,6 +1291,24 @@
       } catch (err) {
         body.innerHTML = '<div class="text-red-600 py-6 text-center">Load failed.</div>';
       }
+    }
+
+    async function userAction(id, action) {
+      const msgs = {
+        disable: 'Disable this investor? They are signed out right away and cannot sign in.',
+        reset: 'Create a one-time password link for this investor? Their current password stops working until they use the link (valid 7 days). You send the link to them yourself.'
+      };
+      if (msgs[action] && !confirm(msgs[action])) return;
+      try {
+        const r = await fetch(apiUrl('/api/registrations'), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) { alert(j.error || ('Failed (' + r.status + ')')); return; }
+        if (action === 'reset' && j.link) {
+          try { await navigator.clipboard.writeText(j.link); } catch (_) {}
+          window.prompt('Password link (copied if allowed). Send it to ' + ((j.registration && j.registration.email) || 'the investor') + ':', j.link);
+        }
+        openRegsModal();
+      } catch (_) { alert('Action failed'); }
     }
 
     function closeRegsModal() {
@@ -1368,6 +1591,7 @@
     function openSheet(id) {
       const p = byId[id];
       if (!p) return;
+      trackEvent({ type: 'deal_view', dealId: id, address: p.address || '', city: p.city || '' });
       history.replaceState(null, '', '#p=' + encodeURIComponent(id));
       const dateObj = parseDate(p.emailDate);
       const dateStr = dateObj ? dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.emailDate || '—');

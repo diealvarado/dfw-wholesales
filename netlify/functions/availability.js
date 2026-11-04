@@ -45,8 +45,8 @@ exports.handler = async (event) => {
     return { statusCode: 204, headers: { 'Cache-Control': 'no-store' }, body: '' };
   }
 
-  const cookies = parseCookies(event.headers.cookie || event.headers.Cookie || '');
-  const role = cookies.alvacom_auth;
+  const session = await require('./_lib/auth').getSession(event);
+  const role = session && session.role;
   if (role !== 'admin' && role !== 'investor') {
     return json(401, { error: 'Unauthorized' });
   }

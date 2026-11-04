@@ -1,4 +1,5 @@
 const { getStore, connectLambda } = require('@netlify/blobs');
+const A = require('./_lib/auth');
 
 function parseCookies(header) {
   const out = {};
@@ -159,8 +160,8 @@ exports.handler = async (event) => {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  const cookies = parseCookies(event.headers.cookie || event.headers.Cookie || '');
-  const role = cookies.alvacom_auth;
+  const session = await A.getSession(event);
+  const role = session && session.role;
   if (role !== 'admin' && role !== 'investor') {
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
   }

@@ -1,5 +1,6 @@
 const { getStore, connectLambda } = require('@netlify/blobs');
 const crypto = require('crypto');
+const A = require('./_lib/auth');
 
 function json(status, body) {
   return {
@@ -85,6 +86,21 @@ exports.handler = async (event) => {
   if (!name || name.length < 2) return json(400, { error: 'Full name is required' });
   if (!validEmail(email)) return json(400, { error: 'Valid email is required' });
   if (!validPhone(phone)) return json(400, { error: 'Valid phone is required' });
+  const password = String(body.password || '');
+  const pwErr = A.passwordProblem(password);
+  if (pwErr) return json(400, { error: pwErr });
+
+  try {
+    const existing = await A.findUserByEmail(event, email);
+    if (existing && existing.status === 'approved') {
+      return json(409, { error: existing.passwordHash
+        ? 'This email already has access. Sign in with your email and password.'
+        : 'This email is already approved. Ask Alvacom Homes for a password setup link.' });
+    }
+    if (existing && existing.status === 'disabled') {
+      return json(403, { error: 'This email cannot request access. Contact Alvacom Homes.' });
+    }
+  } catch (_) {}
 
   const id = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
   const record = {
@@ -94,6 +110,8 @@ exports.handler = async (event) => {
     phone,
     createdAt: new Date().toISOString(),
     status: 'pending',
+    passwordHash: A.hashPassword(password),
+    tokenVersion: 0,
   };
 
   try {
@@ -110,6 +128,7 @@ exports.handler = async (event) => {
       await store.setJSON(id, record);
     } catch (_) {}
 
+    await A.logEvent(event, 'register', { email, userId: id, name });
     return json(200, { ok: true, id });
   } catch (err) {
     console.error('register', err && err.message);

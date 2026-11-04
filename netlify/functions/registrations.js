@@ -1,4 +1,5 @@
 const { getStore, connectLambda } = require('@netlify/blobs');
+const A = require('./_lib/auth');
 
 function parseCookies(header = '') {
   return Object.fromEntries(
@@ -52,9 +53,9 @@ async function mailerHealth() {
   }
 }
 
-function requireAdmin(event) {
-  const cookies = parseCookies(event.headers.cookie || event.headers.Cookie || '');
-  return cookies.alvacom_auth === 'admin';
+async function requireAdmin(event) {
+  const s = await A.getSession(event);
+  return !!(s && s.role === 'admin');
 }
 
 exports.handler = async (event) => {
@@ -62,7 +63,7 @@ exports.handler = async (event) => {
     return { statusCode: 204, headers: { 'Cache-Control': 'no-store' }, body: '' };
   }
 
-  if (!requireAdmin(event)) {
+  if (!(await requireAdmin(event))) {
     return json(403, { error: 'Admin only' });
   }
 
@@ -75,7 +76,7 @@ exports.handler = async (event) => {
       for (const b of blobs) {
         try {
           const data = await store.get(b.key, { type: 'json' });
-          if (data && typeof data === 'object') registrations.push(data);
+          if (data && typeof data === 'object') registrations.push(A.publicUser(data));
         } catch (_) {}
       }
       registrations.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
@@ -84,6 +85,44 @@ exports.handler = async (event) => {
     } catch (err) {
       return json(500, { error: 'load failed', detail: String(err && err.message || err) });
     }
+  }
+
+  // Admin user actions: disable | enable | reset (issue one-time setup link, clears password)
+  if (event.httpMethod === 'POST') {
+    let body;
+    try { body = JSON.parse(event.body || '{}'); } catch (_) { return json(400, { error: 'Invalid JSON' }); }
+    const id = String(body.id || '').trim();
+    const action = String(body.action || '');
+    if (!id) return json(400, { error: 'id required' });
+    const store = getRegistrationsStore(event);
+    const rec = await store.get(id, { type: 'json' }).catch(() => null);
+    if (!rec) return json(404, { error: 'Registration not found' });
+    if (action === 'disable') {
+      if (rec.status !== 'disabled') rec.statusBeforeDisable = rec.status;
+      rec.status = 'disabled';
+      rec.disabledAt = new Date().toISOString();
+      rec.tokenVersion = (rec.tokenVersion || 0) + 1;
+      delete rec.setupTokenHash; delete rec.setupExpires;
+      await store.setJSON(id, rec);
+      await A.logEvent(event, 'admin_disable', { email: rec.email, userId: id });
+      return json(200, { ok: true, registration: A.publicUser(rec) });
+    }
+    if (action === 'enable') {
+      rec.status = rec.statusBeforeDisable === 'pending' ? 'pending' : 'approved';
+      delete rec.disabledAt; delete rec.statusBeforeDisable;
+      await store.setJSON(id, rec);
+      await A.logEvent(event, 'admin_enable', { email: rec.email, userId: id });
+      return json(200, { ok: true, registration: A.publicUser(rec) });
+    }
+    if (action === 'reset') {
+      if (rec.status === 'disabled') return json(400, { error: 'Enable the user first' });
+      delete rec.passwordHash;
+      rec.tokenVersion = (rec.tokenVersion || 0) + 1;
+      const link = await A.issueSetupLink(event, rec);
+      await A.logEvent(event, 'admin_reset', { email: rec.email, userId: id });
+      return json(200, { ok: true, link, expires: rec.setupExpires, registration: A.publicUser(rec) });
+    }
+    return json(400, { error: 'Unknown action' });
   }
 
   if (event.httpMethod === 'DELETE') {

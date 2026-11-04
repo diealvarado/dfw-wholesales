@@ -1,4 +1,5 @@
 const { getStore, connectLambda } = require('@netlify/blobs');
+const A = require('./_lib/auth');
 
 function parseCookies(header = '') {
   return Object.fromEntries(
@@ -35,8 +36,8 @@ function approvalBody(name, password) {
   return 'Hi ' + (name || 'Investor') + ',\n\n' +
     'Your request for access to Alvacom Homes Off-Market has been approved.\n\n' +
     'Site: ' + SITE_URL + '\n' +
-    'Investor access password: ' + password + '\n\n' +
-    'Sign in with this password to view available off-market listings.\n\n' +
+    'Your password: ' + password + '\n\n' +
+    'Sign in with your email and password to view available off-market listings.\n\n' +
     '— Alvacom Homes\n';
 }
 
@@ -77,8 +78,8 @@ exports.handler = async (event) => {
     return json(405, { error: 'Method not allowed' });
   }
 
-  const cookies = parseCookies(event.headers.cookie || event.headers.Cookie || '');
-  if (cookies.alvacom_auth !== 'admin') {
+  const session = await A.getSession(event);
+  if (!session || session.role !== 'admin') {
     return json(403, { error: 'Admin only' });
   }
 
@@ -94,16 +95,23 @@ exports.handler = async (event) => {
 
   const mailerUrl = process.env.APPROVAL_MAILER_URL || '';
   const approvalSecret = process.env.APPROVAL_SECRET || '';
-  const sitePassword = process.env.SITE_PASSWORD || '';
-  if (!sitePassword) {
-    return json(500, { error: 'SITE_PASSWORD not configured' });
-  }
 
   try {
     const store = getRegistrationsStore(event);
     const record = await store.get(id, { type: 'json' });
     if (!record || typeof record !== 'object') {
       return json(404, { error: 'Registration not found' });
+    }
+
+    // Per-investor accounts: never email a shared password. If the registrant
+    // set a password at sign-up, tell them to use it; otherwise include a
+    // one-time password setup link (valid 7 days).
+    let sitePassword;
+    if (record.passwordHash) {
+      sitePassword = 'the password you chose when you requested access (sign in with ' + record.email + ')';
+    } else {
+      const link = await A.issueSetupLink(event, record);
+      sitePassword = 'set your password here (link valid 7 days): ' + link;
     }
 
     if (manual) {
@@ -139,6 +147,7 @@ exports.handler = async (event) => {
     record.status = 'approved';
     record.approvedAt = new Date().toISOString();
     record.emailed = true;
+    await A.logEvent(event, 'approved', { email: record.email, userId: record.id });
     delete record.lastEmailError;
     await store.setJSON(id, record);
     return json(200, { ok: true, registration: record, mailer: result.data });
