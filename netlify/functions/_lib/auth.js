@@ -202,6 +202,7 @@ async function logEvent(event, type, data) {
 const RL_WINDOW_MS = 15 * 60 * 1000;
 const RL_MAX_EMAIL_IP = 5;
 const RL_MAX_IP = 20;
+const RL_MAX_EMAIL = 10; // per email, any IP (defeats rotating IPs)
 async function rlState(event, keys) {
   const st = store(event, 'auth-ratelimit');
   const cutoff = Date.now() - RL_WINDOW_MS;
@@ -214,12 +215,14 @@ async function rlState(event, keys) {
 }
 function rlKeys(event, email) {
   const ip = clientIp(event);
-  return { pair: 'p/' + sha(String(email || '').toLowerCase() + '|' + ip), ip: 'i/' + sha(ip) };
+  const e = String(email || '').toLowerCase();
+  return { pair: 'p/' + sha(e + '|' + ip), ip: 'i/' + sha(ip), em: 'e/' + sha(e) };
 }
 async function rlBlocked(event, email) {
   const k = rlKeys(event, email);
-  const s = await rlState(event, [k.pair, k.ip]);
+  const s = await rlState(event, [k.pair, k.ip, k.em]);
   const now = Date.now();
+  if (s[k.em].length >= (email === '(no-email)' ? 30 : RL_MAX_EMAIL)) return Math.ceil((s[k.em][0] + RL_WINDOW_MS - now) / 1000);
   if (s[k.pair].length >= RL_MAX_EMAIL_IP) return Math.ceil((s[k.pair][0] + RL_WINDOW_MS - now) / 1000);
   if (s[k.ip].length >= RL_MAX_IP) return Math.ceil((s[k.ip][0] + RL_WINDOW_MS - now) / 1000);
   return 0;
@@ -227,12 +230,13 @@ async function rlBlocked(event, email) {
 async function rlFail(event, email) {
   const k = rlKeys(event, email);
   const st = store(event, 'auth-ratelimit');
-  const s = await rlState(event, [k.pair, k.ip]);
+  const s = await rlState(event, [k.pair, k.ip, k.em]);
+  await st.setJSON(k.em, { fails: s[k.em].concat(Date.now()).slice(-50) });
   await st.setJSON(k.pair, { fails: s[k.pair].concat(Date.now()).slice(-50) });
   await st.setJSON(k.ip, { fails: s[k.ip].concat(Date.now()).slice(-50) });
 }
 async function rlClear(event, email) {
-  try { await store(event, 'auth-ratelimit').delete(rlKeys(event, email).pair); } catch (_) {}
+  try { const k = rlKeys(event, email); const st = store(event, 'auth-ratelimit'); await st.delete(k.pair); await st.delete(k.em); } catch (_) {}
 }
 
 // ---- one-time password setup links ----
