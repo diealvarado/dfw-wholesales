@@ -11,8 +11,8 @@ function store(event, name) {
   try { connectLambda(event); } catch (_) {}
   const siteID = process.env.BLOBS_SITE_ID || process.env.SITE_ID;
   const token = process.env.BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
-  if (siteID && token) return getStore({ name, siteID, token });
-  return getStore(name);
+  if (siteID && token) return getStore({ name, siteID, token, consistency: 'strong' });
+  return getStore({ name, consistency: 'strong' });
 }
 
 function json(status, body, extraHeaders) {
