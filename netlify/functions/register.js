@@ -42,6 +42,7 @@ async function notifyAdmins(record) {
       body: JSON.stringify({
         action: 'notify',
         secret,
+        siteUrl: A.PUBLIC_BASE_URL + '/',
         name: record.name,
         email: record.email,
         phone: record.phone,

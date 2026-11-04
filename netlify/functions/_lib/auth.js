@@ -240,7 +240,9 @@ async function rlClear(event, email) {
 }
 
 // ---- one-time password setup links ----
-const SITE_BASE = process.env.PUBLIC_SITE_URL || 'https://dfw-wholesales.netlify.app';
+// Public links always use the branded proxy URL (Netlify sees its own host behind Cloudflare).
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || process.env.PUBLIC_SITE_URL || 'https://alvacomhomes.com/offmarket').replace(/\/+$/, '');
+const SITE_BASE = PUBLIC_BASE_URL;
 async function issueSetupLink(event, record, days) {
   const raw = crypto.randomBytes(24).toString('base64url');
   record.setupTokenHash = sha('setup:' + raw);
@@ -250,6 +252,7 @@ async function issueSetupLink(event, record, days) {
 }
 
 module.exports = {
+  PUBLIC_BASE_URL,
   issueSetupLink,
   store, json, parseCookies, hdr, sessionCookie, clearCookies, newSession, getSession, legacyActive, LEGACY_UNTIL,
   hashPassword, checkPassword, passwordProblem, safeEqual, sha, listUsers, findUserByEmail, publicUser,

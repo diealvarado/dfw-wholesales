@@ -29,7 +29,7 @@ function getRegistrationsStore(event) {
   return getStore('registrations');
 }
 
-const SITE_URL = 'https://dfw-wholesales.netlify.app';
+const SITE_URL = A.PUBLIC_BASE_URL + '/';
 const SUBJECT = 'Your Alvacom Homes access is approved';
 
 function approvalBody(name, password) {
@@ -133,6 +133,7 @@ exports.handler = async (event) => {
     const result = await callMailer(mailerUrl, {
       action: 'approve',
       secret: approvalSecret,
+      siteUrl: SITE_URL,
       to: record.email,
       name: record.name,
       password: sitePassword,
